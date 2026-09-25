@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ZOZO Salad 線上點餐</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --sage:#6B8E5A;--sage-light:#E8F0E4;--sage-dark:#3D5A2E;
+  --cream:#FAF7F2;--warm:#A67B5B;--warm-light:#F5EDE4;
+  --dark:#2D2A26;--gray:#8A8580;--light-gray:#E8E4DF;
+  --red:#D4553A;--white:#FFFFFF;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 2px 8px rgba(0,0,0,.08);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC",sans-serif;
+  padding-top:env(safe-area-inset-top,0);padding-bottom:env(safe-area-inset-bottom,0);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0);scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--cream);color:var(--dark);-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+
+/* Header */
+.header{position:sticky;top:0;z-index:100;background:var(--sage);color:#fff;
+  padding:14px 16px 0;box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.header-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.header-logo{font-size:20px;font-weight:700;letter-spacing:.5px}
+.header-logo span{font-size:13px;font-weight:400;opacity:.85;margin-left:6px}
+.header-badge{margin-left:auto;font-size:12px;background:rgba(255,255,255,.2);
+  padding:3px 10px;border-radius:20px}
+
+/* Category tabs */
+.tabs{display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  padding-bottom:12px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;
+  color:rgba(255,255,255,.75);transition:all .2s;white-space:nowrap}
+.tab.active{background:#fff;color:var(--sage-dark);font-weight:600}
+
+/* Main content */
+.main{padding:12px 12px 90px}
+.section-title{font-size:18px;font-weight:700;color:var(--sage-dark);margin:16px 4px 4px;
+  display:flex;align-items:center;gap:8px}
+.section-sub{font-size:12px;color:var(--gray);margin:0 4px 12px;font-weight:400}
+
+/* Menu cards */
+.menu-grid{display:grid;gap:10px}
+.menu-card{background:#fff;border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);
+  display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+  transition:transform .15s;position:relative}
+.menu-card:active{transform:scale(.98)}
+.menu-card-info{flex:1;min-width:0}
+.menu-card-name{font-size:15px;font-weight:600;margin-bottom:2px}
+.menu-card-desc{font-size:12px;color:var(--gray);line-height:1.5}
+.menu-card-eng{font-size:11px;color:var(--gray);opacity:.7}
+.menu-card-price{font-size:17px;font-weight:700;color:var(--sage-dark);white-space:nowrap}
+.menu-card-price small{font-size:12px;font-weight:400;color:var(--gray)}
+
+/* Custom salad entry card */
+.custom-entry{background:linear-gradient(135deg,var(--sage-light),#f0f5ed);
+  border:2px solid var(--sage);border-radius:var(--radius);padding:16px;
+  text-align:center;box-shadow:var(--shadow)}
+.custom-entry h3{font-size:17px;color:var(--sage-dark);margin-bottom:6px}
+.custom-entry p{font-size:13px;color:var(--gray);margin-bottom:12px}
+.custom-entry button{background:var(--sage);color:#fff;padding:10px 28px;
+  border-radius:24px;font-size:14px;font-weight:600;box-shadow:0 3px 10px rgba(107,142,90,.3)}
+
+/* Add button */
+.add-btn{width:36px;height:36px;border-radius:50%;background:var(--sage);color:#fff;
+  font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 2px 6px rgba(107,142,90,.3);transition:transform .15s}
+.add-btn:active{transform:scale(.9)}
+
+/* Qty control */
+.qty-ctrl{display:flex;align-items:center;gap:8px}
+.qty-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--sage);
+  color:var(--sage);font-size:16px;display:flex;align-items:center;justify-content:center}
+.qty-btn.minus{border-color:var(--red);color:var(--red)}
+.qty-num{font-size:15px;font-weight:600;min-width:20px;text-align:center}
+
+/* Cart bar */
+.cart-bar{position:fixed;bottom:0;left:0;right:0;z-index:200;
+  padding:0 12px calc(12px + env(safe-area-inset-bottom,0));
+  pointer-events:none}
+.cart-btn{width:100%;padding:14px;background:var(--sage-dark);color:#fff;
+  border-radius:var(--radius);display:flex;align-items:center;justify-content:space-between;
+  font-size:15px;font-weight:600;box-shadow:0 4px 20px rgba(61,90,46,.35);
+  pointer-events:auto;transition:transform .15s}
+.cart-btn:active{transform:scale(.98)}
+.cart-badge{background:#fff;color:var(--sage-dark);width:24px;height:24px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700}
+
+/* Cart drawer */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;
+  animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.cart-drawer{position:fixed;bottom:0;left:0;right:0;z-index:301;
+  background:#fff;border-radius:16px 16px 0 0;max-height:85vh;
+  display:flex;flex-direction:column;animation:slideUp .25s ease-out;
+  padding-bottom:env(safe-area-inset-bottom,0)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.cart-header{padding:16px;border-bottom:1px solid var(--light-gray);
+  display:flex;align-items:center;justify-content:space-between}
+.cart-header h2{font-size:17px;font-weight:700}
+.cart-header button{font-size:13px;color:var(--red)}
+.cart-body{flex:1;overflow-y:auto;padding:12px 16px}
+.cart-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--light-gray)}
+.cart-item:last-child{border:none}
+.cart-item-info{flex:1}
+.cart-item-name{font-size:14px;font-weight:600}
+.cart-item-detail{font-size:12px;color:var(--gray);margin-top:2px}
+.cart-item-price{font-size:14px;font-weight:600;color:var(--sage-dark)}
+.cart-footer{padding:14px 16px;border-top:1px solid var(--light-gray)}
+.cart-total{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cart-total span:first-child{font-size:15px;font-weight:500}
+.cart-total span:last-child{font-size:20px;font-weight:700;color:var(--sage-dark)}
+.submit-btn{width:100%;padding:14px;background:var(--sage);color:#fff;border-radius:var(--radius);
+  font-size:16px;font-weight:600;box-shadow:0 3px 12px rgba(107,142,90,.3)}
+
+/* Wizard modal */
+.wizard-overlay{position:fixed;inset:0;z-index:400;background:var(--cream);
+  display:flex;flex-direction:column;animation:fadeIn .2s}
+.wizard-header{background:var(--sage);color:#fff;padding:14px 16px;
+  display:flex;align-items:center;gap:12px;flex-shrink:0}
+.wizard-header button{color:#fff;font-size:14px}
+.wizard-header h2{font-size:16px;font-weight:600;flex:1}
+.wizard-price{font-size:15px;font-weight:600}
+.wizard-steps{display:flex;gap:4px;padding:12px 16px;flex-shrink:0}
+.wizard-step{flex:1;height:4px;border-radius:2px;background:var(--light-gray);transition:background .3s}
+.wizard-step.done{background:var(--sage)}
+.wizard-step.current{background:var(--sage);opacity:.6}
+.wizard-body{flex:1;overflow-y:auto;padding:16px}
+.wizard-body h3{font-size:16px;font-weight:700;color:var(--sage-dark);margin-bottom:4px}
+.wizard-body p{font-size:13px;color:var(--gray);margin-bottom:14px}
+.wizard-footer{padding:14px 16px;border-top:1px solid var(--light-gray);
+  display:flex;gap:10px;flex-shrink:0;padding-bottom:calc(14px + env(safe-area-inset-bottom,0))}
+.wizard-footer button{flex:1;padding:12px;border-radius:var(--radius);font-size:15px;font-weight:600}
+.wizard-back{border:1.5px solid var(--sage);color:var(--sage)}
+.wizard-next{background:var(--sage);color:#fff;box-shadow:0 3px 10px rgba(107,142,90,.3)}
+.wizard-next:disabled{opacity:.4}
+
+/* Option cards in wizard */
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt-grid.col3{grid-template-columns:repeat(3,1fr)}
+.opt-card{background:#fff;border:2px solid var(--light-gray);border-radius:var(--radius-sm);
+  padding:10px;text-align:center;transition:all .15s;position:relative}
+.opt-card.selected{border-color:var(--sage);background:var(--sage-light)}
+.opt-card.disabled{opacity:.4;pointer-events:none}
+.opt-card-name{font-size:14px;font-weight:600}
+.opt-card-sub{font-size:11px;color:var(--gray);margin-top:2px}
+.opt-card-price{font-size:13px;font-weight:600;color:var(--sage-dark);margin-top:2px}
+.opt-card .check{position:absolute;top:6px;right:6px;width:18px;height:18px;
+  border-radius:50%;background:var(--sage);color:#fff;font-size:11px;
+  display:flex;align-items:center;justify-content:center}
+
+/* Base options (step1) */
+.base-card{background:#fff;border:2px solid var(--light-gray);border-radius:var(--radius);
+  padding:14px;margin-bottom:10px;transition:all .15s}
+.base-card.selected{border-color:var(--sage);background:var(--sage-light)}
+.base-card-top{display:flex;align-items:center;gap:10px}
+.base-card-num{width:32px;height:32px;border-radius:50%;background:var(--sage);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
+.base-card h4{font-size:15px;font-weight:600;flex:1}
+.base-card .price-tag{font-size:17px;font-weight:700;color:var(--sage-dark)}
+.base-card p{font-size:12px;color:var(--gray);margin-top:6px;line-height:1.5}
+
+/* Options modal for fixed items */
+.opt-modal{position:fixed;inset:0;z-index:350;display:flex;align-items:flex-end;justify-content:center}
+.opt-modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.4)}
+.opt-modal-content{position:relative;background:#fff;border-radius:16px 16px 0 0;
+  width:100%;max-height:70vh;overflow-y:auto;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0));
+  animation:slideUp .25s ease-out}
+.opt-modal-content h3{font-size:17px;font-weight:700;margin-bottom:4px}
+.opt-modal-content .price{font-size:15px;color:var(--sage-dark);font-weight:600;margin-bottom:14px}
+.opt-section{margin-bottom:16px}
+.opt-section label{font-size:13px;font-weight:600;color:var(--gray);margin-bottom:8px;display:block}
+.opt-row{display:flex;gap:8px;flex-wrap:wrap}
+.opt-chip{padding:8px 14px;border-radius:20px;border:1.5px solid var(--light-gray);
+  font-size:13px;transition:all .15s}
+.opt-chip.selected{border-color:var(--sage);background:var(--sage-light);color:var(--sage-dark);font-weight:600}
+.opt-modal-footer{display:flex;gap:10px;margin-top:16px}
+.opt-modal-footer button{flex:1;padding:12px;border-radius:var(--radius);font-size:15px;font-weight:600}
+
+/* Combo section */
+.combo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.combo-card{background:#fff;border:2px solid var(--light-gray);border-radius:var(--radius);
+  padding:12px;text-align:center;transition:all .15s}
+.combo-card.selected{border-color:var(--warm);background:var(--warm-light)}
+.combo-card-label{font-size:18px;font-weight:700;color:var(--warm)}
+.combo-card-price{font-size:15px;font-weight:700;color:var(--warm);margin:4px 0}
+.combo-card-desc{font-size:11px;color:var(--gray);line-height:1.5}
+
+/* Order success */
+.success-screen{position:fixed;inset:0;z-index:500;background:var(--cream);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px;text-align:center;animation:fadeIn .3s}
+.success-icon{font-size:64px;margin-bottom:16px}
+.success-screen h2{font-size:22px;font-weight:700;color:var(--sage-dark);margin-bottom:8px}
+.success-screen p{font-size:14px;color:var(--gray);margin-bottom:24px;line-height:1.6}
+.success-screen .order-id{font-size:28px;font-weight:700;color:var(--sage);margin-bottom:24px;
+  background:var(--sage-light);padding:12px 32px;border-radius:var(--radius)}
+.success-screen button{padding:14px 40px;background:var(--sage);color:#fff;
+  border-radius:var(--radius);font-size:15px;font-weight:600}
+
+/* Empty state */
+.empty{text-align:center;padding:40px 20px;color:var(--gray)}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty p{font-size:14px}
+input:focus,textarea:focus{border-color:var(--sage) !important;box-shadow:0 0 0 2px var(--sage-light)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+/* ─── Menu Data ─── */
+const MENU = {
+  custom: {
+    bases: [
+      { id:'b1',name:'藜麥飯 / 螺旋麵',eng:'Rice or Pasta',price:140,desc:'紅藜麥飯 or 螺旋麵＋蛋白質1＋配菜4＋點綴1＋醬料1',subChoices:['藜麥飯','螺旋麵'] },
+      { id:'b2',name:'半菜半飯 / 麵',eng:'Half salad + rice or pasta',price:160,desc:'生菜＋紅藜麥飯 or 螺旋麵＋蛋白質1＋配菜4＋點綴1＋醬料1',subChoices:['藜麥飯','螺旋麵'] },
+      { id:'b3',name:'生菜沙拉',eng:'Salad',price:170,desc:'生菜＋蛋白質1＋配菜4＋點綴1＋醬料1' },
+      { id:'b4',name:'鬆餅＋生菜沙拉',eng:'Waffle + Salad',price:170,desc:'生菜＋鬆餅＋蛋白質1＋配菜4＋點綴1＋醬料1' },
+    ],
+    proteins: [
+      { id:'p1',name:'水煮雞肉',weight:'55g',extra:0 },
+      { id:'p2',name:'香草雞肉',weight:'55g',extra:0 },
+      { id:'p3',name:'鮪魚',weight:'55g',extra:0 },
+      { id:'p4',name:'里肌豬',weight:'70g',extra:15 },
+      { id:'p5',name:'雞肉豆腐漢堡排',weight:'80g',extra:20 },
+      { id:'p6',name:'燒肉牛五花',weight:'80g',extra:25 },
+      { id:'p7',name:'香酥雞',weight:'100g',extra:30 },
+      { id:'p8',name:'巴沙魚',weight:'100g',extra:30 },
+      { id:'p9',name:'白蝦（5隻）',weight:'',extra:50 },
+      { id:'p10',name:'香煎鮭魚',weight:'80g',extra:55 },
+    ],
+    ingredients: [
+      '洋蔥','秋葵','櫛瓜','番茄','鳳梨','柑橘','豆腐','菠菜','南瓜','起司',
+      '地瓜','泡菜','小黃瓜','玉米筍','玉米粒','杏鮑菇','花椰菜','麵包丁','鷹嘴豆','黑豆',
+      '紫高麗菜','玉子燒','毛豆仁','黑橄欖','馬鈴薯','義大利麵','涼拌海帶絲','水煮蛋（半）','蔓越莓＆葡萄乾','酸黃瓜'
+    ],
+    garnishes: ['芝麻','海苔','起士粉','蒜酥','蕎麥粒','七味粉'],
+    dressings: [
+      '凱薩醬','胡麻醬','蜂蜜芥末醬','辣胡麻醬','莎莎醬','燒肉醬',
+      '義大利油醋醬','水果沙拉醬','檸檬優格醬','日式芝麻醬（素）','和風柚子醬（素）'
+    ],
+    addons: {
+      proteins: [
+        { name:'水煮雞/香草雞/鮪魚',price:45 },
+        { name:'豬里肌',price:50 },
+        { name:'雞肉豆腐漢堡排',price:55 },
+        { name:'燒肉牛五花',price:60 },
+        { name:'香酥雞',price:65 },
+        { name:'巴沙魚',price:65 },
+        { name:'白蝦',price:85 },
+        { name:'鮭魚',price:90 },
+      ],
+      others: [
+        { name:'加購生菜',price:20 },
+      ]
+    }
+  },
+  categories: [
+    { id:'custom',name:'自選沙拉',icon:'🥗' },
+    { id:'salad',name:'配好的沙拉',icon:'🥬' },
+    { id:'sandwich',name:'熱壓吐司',icon:'🥪' },
+    { id:'yogurt',name:'優格',icon:'🫐' },
+    { id:'drink',name:'喝的',icon:'🧋' },
+    { id:'waffle',name:'方格鬆餅',icon:'🧇' },
+    { id:'extra',name:'單點',icon:'🍚' },
+    { id:'combo',name:'搭配套餐',icon:'🎁' },
+  ],
+  items: {
+    salad: [
+      { id:'s1',name:'經典雞肉沙拉',eng:'Chicken breast salad',price:170,desc:'紫高麗菜、玉米粒、蛋、小黃瓜、毛豆仁',needDressing:true },
+      { id:'s2',name:'鬆餅沙拉',eng:'Waffle + Chicken salad',price:170,desc:'紫高麗菜、玉米粒、番茄、小黃瓜、薯泥',note:'蛋白質為雞肉，更換需補差價',needDressing:true },
+      { id:'s3',name:'雞肉豆腐排沙拉',eng:'Chicken and Tofu Hamburg Steak salad',price:190,desc:'紫高麗菜、玉米粒、小黃瓜、番茄、杏鮑菇',needDressing:true },
+      { id:'s4',name:'炸雞沙拉',eng:'Fried chicken salad',price:200,desc:'紫高麗菜、番茄、洋蔥、小黃瓜、地瓜',needDressing:true },
+      { id:'s5',name:'蝦蝦沙拉',eng:'Shrimp salad',price:220,desc:'紫高麗菜、鳳梨、番茄、小黃瓜、毛豆仁',needDressing:true },
+      { id:'s6',name:'香煎鮭魚沙拉',eng:'Pan-Fried Salmon salad',price:220,desc:'洋蔥、玉米粒、蛋、番茄、小黃瓜',needDressing:true },
+    ],
+    sandwich: [
+      { id:'sw1',name:'果醬吐司',eng:'Toast',price:35,desc:'奶酥 / 巧克力 / 花生',hasJamChoice:true },
+      { id:'sw2',name:'凱薩鮪魚',eng:'Tuna with Caesar',price:75,desc:'鮪魚、玉米、洋蔥、番茄' },
+      { id:'sw3',name:'辣醬起司雞肉',eng:'Cheese chicken with Spicy',price:75,desc:'起司、玉米粒、小黃瓜、雞肉' },
+      { id:'sw4',name:'馬鈴薯起司蛋',eng:'Cheese potato Sandwich',price:75,desc:'馬鈴薯、起司、蛋、玉米粒' },
+      { id:'sw5',name:'里肌肉蛋',eng:'Pork tenderloin Sandwich',price:85,desc:'豬里肌、蛋、玉米粒',hasCheeseAdd:true },
+    ],
+    yogurt: [
+      { id:'y1',name:'原味優格',eng:'Original Yogurt',price:55 },
+      { id:'y2',name:'莓果優格',eng:'Berry Yogurt',price:60 },
+      { id:'y3',name:'蜂蜜優格',eng:'Honey Yogurt',price:60 },
+    ],
+    drink: [
+      { id:'d1',name:'紅茶',eng:'Black tea',price:30,hasDrinkOpt:true },
+      { id:'d2',name:'無糖綠茶',eng:'Green tea (sugar free)',price:35,hasDrinkOpt:true },
+      { id:'d3',name:'蘋果醋',eng:'Apple vinegar',price:35,hasDrinkOpt:true },
+      { id:'d4',name:'無糖豆漿',eng:'Soy milk (sugar free)',price:35,hasDrinkOpt:true },
+      { id:'d5',name:'鮮奶茶',eng:'Milk tea',price:40,hasDrinkOpt:true },
+      { id:'d6',name:'黑咖啡',eng:'Americano (360ml)',price:45,hasDrinkOpt:true },
+      { id:'d7',name:'拿鐵',eng:'Latte (360ml)',price:60,hasDrinkOpt:true },
+    ],
+    waffle: [
+      { id:'w1',name:'原味鬆餅',eng:'Original',price:50 },
+      { id:'w2',name:'巧克力鬆餅',eng:'Chocolate',price:55 },
+      { id:'w3',name:'蜂蜜鬆餅',eng:'Honey',price:55 },
+    ],
+    extra: [
+      { id:'e1',name:'紅藜麥飯',eng:'Rice (150g)',price:20 },
+      { id:'e2',name:'每日湯品',eng:'Soup',price:0,marketPrice:true },
+      { id:'e3',name:'生菜盒',eng:'Lettuce',price:0,marketPrice:true },
+    ],
+  },
+  combos: [
+    { id:'cA',label:'A',price:55,desc:'大杯紅茶＋果醬吐司' },
+    { id:'cB',label:'B',price:70,desc:'大杯紅茶＋原味鬆餅' },
+    { id:'cC',label:'C',price:80,desc:'大杯紅茶＋莓果優格' },
+  ],
+  drinkNote: '可做成熱飲 / 小杯 (360ml) 少五元',
+  waffleNote: '現點現做需等 10–15 分鐘',
+  saladNote: '＊配料會因季節及現場狀況調整　再選一個沙拉醬',
+};
+
+/* ─── Helpers ─── */
+const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const fmtPrice = n => `$${n}`;
+const isValidPhone = p => /^09\d{8}$/.test(p.replace(/[\s-]/g,''));
+
+function loadOrders(){ try{ return JSON.parse(localStorage.getItem('zozo_orders')||'[]') }catch{ return [] } }
+function saveOrder(order){ const all=loadOrders(); all.push(order); localStorage.setItem('zozo_orders',JSON.stringify(all)); }
+function loadSoldOut(){ try{ return JSON.parse(localStorage.getItem('zozo_soldout')||'[]') }catch{ return [] } }
+
+/* Operating hours: Sat closed, Sun-Fri 11:00-15:00 & 17:00-20:00 */
+function isOpen(){
+  const now=new Date(), day=now.getDay(), h=now.getHours(), m=now.getMinutes(), t=h*60+m;
+  if(day===6) return false; // Saturday closed
+  return (t>=660&&t<900)||(t>=1020&&t<1200); // 11:00-15:00, 17:00-20:00
+}
+
+/* ─── App ─── */
+function App(){
+  const [cat,setCat] = useState('custom');
+  const [cart,setCart] = useState([]);
+  const [showCart,setShowCart] = useState(false);
+  const [showConfirm,setShowConfirm] = useState(false);
+  const [wizard,setWizard] = useState(null);
+  const [optModal,setOptModal] = useState(null);
+  const [success,setSuccess] = useState(null);
+  const [orderNote,setOrderNote] = useState('');
+  const [custName,setCustName] = useState('');
+  const [custPhone,setCustPhone] = useState('');
+  const [submitting,setSubmitting] = useState(false);
+  const [open,setOpen] = useState(isOpen());
+  const [soldOut,setSoldOut] = useState(loadSoldOut());
+  const tabsRef = useRef(null);
+
+  /* Check open status every minute */
+  useEffect(()=>{
+    const iv=setInterval(()=>setOpen(isOpen()),60000);
+    return ()=>clearInterval(iv);
+  },[]);
+
+  /* Scroll spy: auto-highlight tab on scroll */
+  useEffect(()=>{
+    const ids = MENU.categories.map(c=>'sec-'+c.id);
+    const observer = new IntersectionObserver((entries)=>{
+      for(const e of entries){
+        if(e.isIntersecting && e.intersectionRatio>0.2){
+          const id = e.target.id.replace('sec-','');
+          setCat(id);
+          // scroll tab into view
+          const tab = document.querySelector(`.tab[data-cat="${id}"]`);
+          if(tab) tab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+        }
+      }
+    },{threshold:0.2, rootMargin:'-80px 0px -60% 0px'});
+    ids.forEach(id=>{ const el=document.getElementById(id); if(el) observer.observe(el); });
+    return ()=>observer.disconnect();
+  },[]);
+
+  const totalQty = cart.reduce((s,i)=>s+i.qty,0);
+  const totalPrice = cart.reduce((s,i)=>s+i.price*i.qty,0);
+
+  const scrollToCat = (id) => { setCat(id); const el=document.getElementById('sec-'+id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
+
+  /* Add to cart */
+  const addToCart = useCallback((item) => {
+    setCart(prev => {
+      const key = item.key || item.id;
+      const idx = prev.findIndex(c => c.key === key);
+      if(idx>=0){ const n=[...prev]; n[idx]={...n[idx],qty:n[idx].qty+1}; return n; }
+      return [...prev, {...item, key, qty:1}];
+    });
+  },[]);
+
+  const updateQty = useCallback((key,delta) => {
+    setCart(prev => prev.map(c => c.key===key ? {...c,qty:Math.max(0,c.qty+delta)} : c).filter(c=>c.qty>0));
+  },[]);
+
+  const clearCart = () => setCart([]);
+
+  /* Submit - step 1: validate and show confirm */
+  const trySubmit = () => {
+    if(!custName.trim()){ alert('請輸入取餐姓名'); return; }
+    if(!isValidPhone(custPhone)){ alert('請輸入正確手機號碼（09 開頭 10 碼）'); return; }
+    setShowCart(false);
+    setShowConfirm(true);
+  };
+
+  /* Submit - step 2: confirmed, save */
+  const confirmSubmit = () => {
+    if(submitting) return;
+    setSubmitting(true);
+    setTimeout(()=>{
+      const order = { id:genId(), items:cart, total:totalPrice, note:orderNote, name:custName.trim(), phone:custPhone.trim(), time:new Date().toISOString() };
+      saveOrder(order);
+      setShowConfirm(false);
+      setSuccess(order);
+      setCart([]); setOrderNote(''); setCustName(''); setCustPhone('');
+      setSubmitting(false);
+    },600);
+  };
+
+  /* Handle item click - check if needs options */
+  const handleItemClick = (item, catId) => {
+    if(item.marketPrice) return; // 時價 items can't be ordered online
+    if(item.needDressing || item.hasJamChoice || item.hasCheeseAdd || item.hasDrinkOpt){
+      setOptModal({item, catId});
+    } else {
+      addToCart({id:item.id, name:item.name, price:item.price, detail:''});
+    }
+  };
+
+  /* Add from option modal */
+  const addFromOpt = (item, opts, priceOverride) => {
+    const details = opts.filter(Boolean).join('、');
+    const price = priceOverride != null ? priceOverride : item.price;
+    const key = item.id + '_' + details;
+    addToCart({id:item.id, key, name:item.name, price, detail:details});
+    setOptModal(null);
+  };
+
+  /* Add custom salad from wizard */
+  const addCustomSalad = (salad) => {
+    const key = 'custom_'+genId();
+    addToCart({
+      id:key, key, name:'自選｜'+(salad.baseSub||salad.base.name),
+      price:salad.totalPrice,
+      detail:[salad.protein.name, salad.ingredients.join('、'), salad.garnish, salad.dressing.join('、'),
+        salad.addons?.length ? '加購：'+salad.addons.map(a=>a.name).join('、') : '',
+        salad.combo?'套餐'+salad.combo.label:''].filter(Boolean).join('｜')
+    });
+    setWizard(null);
+  };
+
+  return (
+    <>
+      <header className="header">
+        <div className="header-top">
+          <div className="header-logo">
+            <svg viewBox="0 0 40 36" width="32" height="28" style={{verticalAlign:'middle',marginRight:6}}>
+              {/* Horns */}
+              <path d="M10 12 Q8 4 5 2" stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+              <path d="M30 12 Q32 4 35 2" stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+              {/* Head */}
+              <ellipse cx="20" cy="20" rx="13" ry="12" fill="none" stroke="#fff" strokeWidth="2.2"/>
+              {/* Ears */}
+              <path d="M7 16 Q3 12 5 8" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/>
+              <path d="M33 16 Q37 12 35 8" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/>
+              {/* Eyes */}
+              <circle cx="15" cy="19" r="1.5" fill="#fff"/>
+              <circle cx="25" cy="19" r="1.5" fill="#fff"/>
+              {/* Nose */}
+              <ellipse cx="20" cy="22" rx="1.8" ry="1.3" fill="#fff"/>
+              {/* Mouth */}
+              <path d="M17 25 Q20 28 23 25" stroke="#fff" strokeWidth="1.3" fill="none" strokeLinecap="round"/>
+            </svg>
+            ZOZO Salad<span>線上點餐</span>
+          </div>
+          <div className="header-badge" style={open?{}:{background:'rgba(212,85,58,.8)'}}>
+            {open?'營業中':'未營業'}
+          </div>
+        </div>
+        <div className="tabs" ref={tabsRef}>
+          {MENU.categories.map(c=>(
+            <button key={c.id} data-cat={c.id} className={`tab${cat===c.id?' active':''}`} onClick={()=>scrollToCat(c.id)}>
+              {c.icon} {c.name}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {!open && (
+        <div style={{background:'var(--red)',color:'#fff',textAlign:'center',padding:'10px 16px',fontSize:13,fontWeight:500}}>
+          ⏰ 目前非營業時間，可先瀏覽菜單，營業時段再送出訂單
+        </div>
+      )}
+
+      <main className="main">
+        {/* 自選沙拉 */}
+        <div id="sec-custom">
+          <div className="section-title">🥗 自選系列</div>
+          <div className="section-sub">5 步驟打造你的專屬沙拉</div>
+          <div className="custom-entry" onClick={()=>setWizard({step:0})}>
+            <h3>開始組合你的沙拉</h3>
+            <p>選基底 → 蛋白質 → 配菜 → 點綴 → 醬料</p>
+            <button>開始點餐 →</button>
+          </div>
+        </div>
+
+        {/* 配好的沙拉 */}
+        <div id="sec-salad">
+          <div className="section-title">🥬 配好的沙拉</div>
+          <div className="section-sub">{MENU.saladNote}</div>
+          <div className="menu-grid">
+            {MENU.items.salad.map(item=>(
+              <MenuCard key={item.id} item={item} cart={cart} onAdd={()=>handleItemClick(item,'salad')} onQty={updateQty}/>
+            ))}
+          </div>
+        </div>
+
+        {/* 熱壓吐司 */}
+        <div id="sec-sandwich">
+          <div className="section-title">🥪 熱壓吐司</div>
+          <div className="menu-grid">
+            {MENU.items.sandwich.map(item=>(
+              <MenuCard key={item.id} item={item} cart={cart} onAdd={()=>handleItemClick(item,'sandwich')} onQty={updateQty}/>
+            ))}
+          </div>
+        </div>
+
+        {/* 優格 */}
+        <div id="sec-yogurt">
+          <div className="section-title">🫐 優格</div>
+          <div className="menu-grid">
+            {MENU.items.yogurt.map(item=>(
+              <MenuCard key={item.id} item={item} cart={cart} onAdd={()=>handleItemClick(item,'yogurt')} onQty={updateQty}/>
+            ))}
+          </div>
+        </div>
+
+        {/* 喝的 */}
+        <div id="sec-drink">
+          <div className="section-title">🧋 喝的</div>
+          <div className="section-sub">{MENU.drinkNote}</div>
+          <div className="menu-grid">
+            {MENU.items.drink.map(item=>(
+              <MenuCard key={item.id} item={item} cart={cart} onAdd={()=>handleItemClick(item,'drink')} onQty={updateQty}/>
+            ))}
+          </div>
+        </div>
+
+        {/* 方格鬆餅 */}
+        <div id="sec-waffle">
+          <div className="section-title">🧇 方格鬆餅</div>
+          <div className="section-sub">{MENU.waffleNote}</div>
+          <div className="menu-grid">
+            {MENU.items.waffle.map(item=>(
+              <MenuCard key={item.id} item={item} cart={cart} onAdd={()=>handleItemClick(item,'waffle')} onQty={updateQty}/>
+            ))}
+          </div>
+        </div>
+
+        {/* 單點 */}
+        <div id="sec-extra">
+          <div className="section-title">🍚 單點</div>
+          <div className="menu-grid">
+            {MENU.items.extra.map(item=>(
+              <MenuCard key={item.id} item={item} cart={cart} onAdd={()=>handleItemClick(item,'extra')} onQty={updateQty}/>
+            ))}
+          </div>
+        </div>
+
+        {/* 搭配套餐 */}
+        <div id="sec-combo">
+          <div className="section-title">🎁 搭配套餐</div>
+          <div className="section-sub">加購於任一沙拉</div>
+        </div>
+      </main>
+
+      {/* Cart bar */}
+      {totalQty > 0 && (
+        <div className="cart-bar">
+          <button className="cart-btn" onClick={()=>setShowCart(true)}>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <span className="cart-badge">{totalQty}</span>
+              <span>查看訂單</span>
+            </div>
+            <span>{fmtPrice(totalPrice)}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Cart drawer */}
+      {showCart && (
+        <>
+          <div className="overlay" onClick={()=>setShowCart(false)}/>
+          <div className="cart-drawer">
+            <div className="cart-header">
+              <h2>你的訂單</h2>
+              <button onClick={clearCart}>清空</button>
+            </div>
+            <div className="cart-body">
+              {cart.length===0 ? (
+                <div className="empty"><div className="empty-icon">🛒</div><p>還沒有品項</p></div>
+              ) : cart.map(item=>(
+                <div className="cart-item" key={item.key}>
+                  <div className="cart-item-info">
+                    <div className="cart-item-name">{item.name}</div>
+                    {item.detail && <div className="cart-item-detail">{item.detail}</div>}
+                    <div className="cart-item-price">{fmtPrice(item.price)}</div>
+                  </div>
+                  <div className="qty-ctrl">
+                    <button className="qty-btn minus" onClick={()=>updateQty(item.key,-1)}>−</button>
+                    <span className="qty-num">{item.qty}</span>
+                    <button className="qty-btn" onClick={()=>updateQty(item.key,1)}>＋</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {cart.length>0 && (
+              <div className="cart-footer">
+                <div style={{marginBottom:12}}>
+                  <div style={{display:'flex',gap:8,marginBottom:8}}>
+                    <input placeholder="取餐姓名（必填）" value={custName} onChange={e=>setCustName(e.target.value)}
+                      style={{flex:1,padding:'10px 12px',border:'1.5px solid var(--light-gray)',borderRadius:'var(--radius-sm)',fontSize:14,fontFamily:'var(--font)',outline:'none'}}/>
+                    <input placeholder="聯絡電話（必填）" value={custPhone} onChange={e=>setCustPhone(e.target.value)} type="tel"
+                      style={{flex:1,padding:'10px 12px',border:'1.5px solid var(--light-gray)',borderRadius:'var(--radius-sm)',fontSize:14,fontFamily:'var(--font)',outline:'none'}}/>
+                  </div>
+                  <textarea placeholder="備註（過敏、口味調整...）" value={orderNote} onChange={e=>setOrderNote(e.target.value)} rows={2}
+                    style={{width:'100%',padding:'10px 12px',border:'1.5px solid var(--light-gray)',borderRadius:'var(--radius-sm)',fontSize:14,fontFamily:'var(--font)',resize:'none',outline:'none'}}/>
+                </div>
+                <div className="cart-total">
+                  <span>合計</span>
+                  <span>{fmtPrice(totalPrice)}</span>
+                </div>
+                <button className="submit-btn" onClick={trySubmit}>確認訂單</button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Item option modal */}
+      {optModal && <OptionModal item={optModal.item} dressings={MENU.custom.dressings} onAdd={addFromOpt} onClose={()=>setOptModal(null)}/>}
+
+      {/* Custom salad wizard */}
+      {wizard && <SaladWizard data={MENU.custom} combos={MENU.combos} onAdd={addCustomSalad} onClose={()=>setWizard(null)}/>}
+
+      {/* Confirm screen */}
+      {showConfirm && (
+        <>
+          <div className="overlay" onClick={()=>{setShowConfirm(false);setShowCart(true)}}/>
+          <div className="cart-drawer">
+            <div className="cart-header">
+              <h2>確認訂單</h2>
+              <button onClick={()=>{setShowConfirm(false);setShowCart(true)}}>返回修改</button>
+            </div>
+            <div className="cart-body">
+              <div style={{background:'var(--sage-light)',borderRadius:'var(--radius-sm)',padding:12,marginBottom:14}}>
+                <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{custName}　{custPhone}</div>
+                {orderNote && <div style={{fontSize:13,color:'var(--gray)'}}>備註：{orderNote}</div>}
+              </div>
+              {cart.map(item=>(
+                <div className="cart-item" key={item.key}>
+                  <div className="cart-item-info">
+                    <div className="cart-item-name">{item.name} ×{item.qty}</div>
+                    {item.detail && <div className="cart-item-detail">{item.detail}</div>}
+                  </div>
+                  <div className="cart-item-price">{fmtPrice(item.price*item.qty)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="cart-footer">
+              <div className="cart-total">
+                <span>合計</span>
+                <span>{fmtPrice(totalPrice)}</span>
+              </div>
+              <button className="submit-btn" onClick={confirmSubmit} disabled={submitting}
+                style={submitting?{opacity:.6}:{}}>
+                {submitting ? '送出中...' : `確認送出　${fmtPrice(totalPrice)}`}
+              </button>
+              {!open && <div style={{fontSize:12,color:'var(--red)',textAlign:'center',marginTop:8}}>⏰ 目前非營業時間，訂單將於營業時處理</div>}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Success screen */}
+      {success && (
+        <div className="success-screen" style={{justifyContent:'flex-start',paddingTop:60,overflowY:'auto'}}>
+          <div className="success-icon">🎉</div>
+          <h2>訂單已送出！</h2>
+          <p>請稍候，餐點製作中</p>
+          <div className="order-id">#{success.id.slice(-6).toUpperCase()}</div>
+          <div style={{background:'#fff',borderRadius:'var(--radius)',padding:16,width:'100%',maxWidth:400,boxShadow:'var(--shadow)',textAlign:'left',marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:8,color:'var(--sage-dark)'}}>
+              {success.name}　{success.phone}
+            </div>
+            {success.items.map((item,i)=>(
+              <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:i<success.items.length-1?'1px solid var(--light-gray)':'none'}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:500}}>{item.name} ×{item.qty}</div>
+                  {item.detail && <div style={{fontSize:12,color:'var(--gray)',marginTop:2}}>{item.detail}</div>}
+                </div>
+                <div style={{fontSize:14,fontWeight:600,color:'var(--sage-dark)',flexShrink:0}}>{fmtPrice(item.price*item.qty)}</div>
+              </div>
+            ))}
+            {success.note && <div style={{fontSize:13,color:'var(--gray)',marginTop:8}}>備註：{success.note}</div>}
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:12,paddingTop:10,borderTop:'2px solid var(--sage-light)',fontSize:16,fontWeight:700}}>
+              <span>合計</span><span style={{color:'var(--sage-dark)'}}>{fmtPrice(success.total)}</span>
+            </div>
+          </div>
+          <p style={{fontSize:12,color:'var(--gray)',marginBottom:16}}>可截圖保存此頁面</p>
+          <button onClick={()=>setSuccess(null)}>繼續點餐</button>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ─── Menu Card ─── */
+function MenuCard({ item, cart, onAdd, onQty }){
+  const inCart = cart.filter(c=>c.id===item.id).reduce((s,c)=>s+c.qty,0);
+  return (
+    <div className="menu-card" onClick={onAdd}>
+      <div className="menu-card-info">
+        <div className="menu-card-name">{item.name}</div>
+        {item.eng && <div className="menu-card-eng">{item.eng}</div>}
+        {item.desc && <div className="menu-card-desc">{item.desc}</div>}
+        {item.note && <div className="menu-card-desc" style={{color:'var(--warm)'}}>{item.note}</div>}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
+        <div className="menu-card-price">
+          {item.marketPrice ? <small>時價</small> : fmtPrice(item.price)}
+        </div>
+        {!item.marketPrice && (
+          inCart > 0 ? (
+            <div className="qty-ctrl" onClick={e=>e.stopPropagation()}>
+              <button className="qty-btn minus" onClick={()=>onQty(item.id,-1)}>−</button>
+              <span className="qty-num">{inCart}</span>
+              <button className="qty-btn" onClick={()=>onQty(item.id,1)}>＋</button>
+            </div>
+          ) : (
+            <button className="add-btn" onClick={e=>{e.stopPropagation();onAdd()}}>＋</button>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Option Modal (for salads needing dressing, sandwich options) ─── */
+function OptionModal({ item, dressings, onAdd, onClose }){
+  const [dressing, setDressing] = useState('');
+  const [jam, setJam] = useState('');
+  const [addCheese, setAddCheese] = useState(false);
+  const [drinkTemp, setDrinkTemp] = useState('冰');
+  const [drinkSize, setDrinkSize] = useState('大杯');
+
+  const canSubmit = item.needDressing ? !!dressing : (item.hasJamChoice ? !!jam : true);
+  const jamOpts = ['奶酥','巧克力','花生'];
+  const drinkPriceAdj = item.hasDrinkOpt && drinkSize==='小杯' ? -5 : 0;
+  const cheesePriceAdj = addCheese ? 10 : 0;
+  const finalPrice = item.price + drinkPriceAdj + cheesePriceAdj;
+
+  const handleAdd = () => {
+    const parts = [];
+    if(item.hasDrinkOpt){ parts.push(drinkSize); parts.push(drinkTemp); }
+    if(dressing) parts.push(dressing);
+    if(jam) parts.push(jam);
+    if(addCheese) parts.push('加起司＋$10');
+    onAdd(item, parts, finalPrice);
+  };
+
+  return (
+    <div className="opt-modal">
+      <div className="opt-modal-bg" onClick={onClose}/>
+      <div className="opt-modal-content">
+        <h3>{item.name}</h3>
+        <div className="price">{fmtPrice(finalPrice)}</div>
+
+        {item.hasDrinkOpt && (
+          <>
+            <div className="opt-section">
+              <label>杯型</label>
+              <div className="opt-row">
+                <button className={`opt-chip${drinkSize==='大杯'?' selected':''}`} onClick={()=>setDrinkSize('大杯')}>大杯　{fmtPrice(item.price)}</button>
+                <button className={`opt-chip${drinkSize==='小杯'?' selected':''}`} onClick={()=>setDrinkSize('小杯')}>小杯 (360ml)　{fmtPrice(item.price-5)}</button>
+              </div>
+            </div>
+            <div className="opt-section">
+              <label>冷熱</label>
+              <div className="opt-row">
+                <button className={`opt-chip${drinkTemp==='冰'?' selected':''}`} onClick={()=>setDrinkTemp('冰')}>冰</button>
+                <button className={`opt-chip${drinkTemp==='熱'?' selected':''}`} onClick={()=>setDrinkTemp('熱')}>熱</button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {item.needDressing && (
+          <div className="opt-section">
+            <label>選一種沙拉醬</label>
+            <div className="opt-row">
+              {dressings.map(d=>(
+                <button key={d} className={`opt-chip${dressing===d?' selected':''}`} onClick={()=>setDressing(d)}>{d}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {item.hasJamChoice && (
+          <div className="opt-section">
+            <label>口味</label>
+            <div className="opt-row">
+              {jamOpts.map(j=>(
+                <button key={j} className={`opt-chip${jam===j?' selected':''}`} onClick={()=>setJam(j)}>{j}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {item.hasCheeseAdd && (
+          <div className="opt-section">
+            <label>加購</label>
+            <div className="opt-row">
+              <button className={`opt-chip${addCheese?' selected':''}`} onClick={()=>setAddCheese(!addCheese)}>加起司 +$10</button>
+            </div>
+          </div>
+        )}
+
+        <div className="opt-modal-footer">
+          <button className="wizard-back" onClick={onClose}>取消</button>
+          <button className="wizard-next" disabled={!canSubmit} onClick={handleAdd}>加入訂單　{fmtPrice(finalPrice)}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Custom Salad Wizard ─── */
+function SaladWizard({ data, combos, onAdd, onClose }){
+  const [step, setStep] = useState(0);
+  const [base, setBase] = useState(null);
+  const [baseSub, setBaseSub] = useState('');
+  const [protein, setProtein] = useState(null);
+  const [ingredients, setIngredients] = useState([]);
+  const [garnish, setGarnish] = useState('');
+  const [dressing, setDressing] = useState([]);
+  const [combo, setCombo] = useState(null);
+  const [addons, setAddons] = useState([]);
+  const STEPS = ['基底','蛋白質','配菜','點綴','醬料＋加購'];
+
+  const toggleIngredient = (ing) => {
+    setIngredients(prev => {
+      if(prev.includes(ing)) return prev.filter(i=>i!==ing);
+      return [...prev,ing];
+    });
+  };
+
+  const toggleDressing = (d) => {
+    setDressing(prev => prev.includes(d) ? prev.filter(x=>x!==d) : [...prev,d]);
+  };
+
+  const toggleAddon = (item) => {
+    setAddons(prev => {
+      const idx = prev.findIndex(a=>a.name===item.name);
+      if(idx>=0) return prev.filter((_,i)=>i!==idx);
+      return [...prev, item];
+    });
+  };
+
+  const extraIngCount = Math.max(0, ingredients.length - 4);
+  const extraDressingCount = Math.max(0, dressing.length - 1);
+  const addonsTotal = addons.reduce((s,a)=>s+a.price,0);
+  const totalPrice = (base?.price||0) + (protein?.extra||0) + (combo?.price||0) + (extraIngCount * 20) + (extraDressingCount * 20) + addonsTotal;
+
+  const canNext = () => {
+    if(step===0) return !!base && (!base.subChoices || !!baseSub);
+    if(step===1) return !!protein;
+    if(step===2) return ingredients.length>=4;
+    if(step===3) return !!garnish;
+    if(step===4) return dressing.length>=1;
+    return false;
+  };
+
+  const handleSubmit = () => {
+    onAdd({ base, baseSub, protein, ingredients, garnish, dressing, combo, addons, totalPrice });
+  };
+
+  return (
+    <div className="wizard-overlay">
+      <div className="wizard-header">
+        <button onClick={onClose}>✕</button>
+        <h2>自選沙拉</h2>
+        <span className="wizard-price">{fmtPrice(totalPrice)}</span>
+      </div>
+      <div className="wizard-steps">
+        {STEPS.map((s,i)=>(
+          <div key={i} className={`wizard-step${i<step?' done':''}${i===step?' current':''}`}/>
+        ))}
+      </div>
+
+      <div className="wizard-body">
+        {step===0 && (
+          <>
+            <h3>Step 1：選擇基底</h3>
+            <p>選一種你喜歡的基底</p>
+            {data.bases.map((b,i)=>(
+              <button key={b.id} className={`base-card${base?.id===b.id?' selected':''}`}
+                onClick={()=>{ setBase(b); if(!b.subChoices) setBaseSub(''); else setBaseSub(''); }}>
+                <div className="base-card-top">
+                  <div className="base-card-num">{i+1}</div>
+                  <h4>{b.name}</h4>
+                  <span className="price-tag">{fmtPrice(b.price)}</span>
+                </div>
+                <p>{b.desc}</p>
+                {base?.id===b.id && <span className="check" style={{position:'absolute',top:10,right:10}}>✓</span>}
+                {base?.id===b.id && b.subChoices && (
+                  <div style={{display:'flex',gap:10,marginTop:12}} onClick={e=>e.stopPropagation()}>
+                    {b.subChoices.map(sc=>(
+                      <button key={sc} style={{
+                        flex:1,padding:'12px 0',borderRadius:'var(--radius-sm)',fontSize:15,fontWeight:600,
+                        border: baseSub===sc ? '2.5px solid var(--sage)' : '2px solid var(--light-gray)',
+                        background: baseSub===sc ? 'var(--sage)' : '#fff',
+                        color: baseSub===sc ? '#fff' : 'var(--dark)',
+                        transition:'all .15s',boxShadow: baseSub===sc ? '0 2px 8px rgba(107,142,90,.3)' : 'none'
+                      }} onClick={(e)=>{e.stopPropagation();setBaseSub(sc)}}>
+                        {baseSub===sc && '✓ '}{sc}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </button>
+            ))}
+          </>
+        )}
+
+        {step===1 && (
+          <>
+            <h3>Step 2：選擇蛋白質</h3>
+            <p>選一種蛋白質，部分需加價</p>
+            <div className="opt-grid">
+              {data.proteins.map(p=>(
+                <button key={p.id} className={`opt-card${protein?.id===p.id?' selected':''}`} onClick={()=>setProtein(p)}>
+                  <div className="opt-card-name">{p.name}</div>
+                  {p.weight && <div className="opt-card-sub">{p.weight}</div>}
+                  <div className="opt-card-price">{p.extra>0 ? `+$${p.extra}` : '含在內'}</div>
+                  {protein?.id===p.id && <span className="check">✓</span>}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {step===2 && (
+          <>
+            <h3>Step 3：選擇配菜</h3>
+            <p>選 4 種蔬果配菜（已選 {ingredients.length}/4）
+              {extraIngCount > 0 && <span style={{color:'var(--warm)',fontWeight:600}}>　加選 {extraIngCount} 種 +${extraIngCount*20}</span>}
+            </p>
+            <div style={{fontSize:12,color:'var(--warm)',marginBottom:12,background:'var(--warm-light)',padding:'8px 12px',borderRadius:'var(--radius-sm)'}}>
+              基本 4 種含在內，第 5 種起每種 +$20
+            </div>
+            <div className="opt-grid col3">
+              {data.ingredients.map(ing=>{
+                const sel = ingredients.includes(ing);
+                const idx = ingredients.indexOf(ing);
+                return (
+                  <button key={ing} className={`opt-card${sel?' selected':''}`} onClick={()=>toggleIngredient(ing)}>
+                    <div className="opt-card-name" style={{fontSize:13}}>{ing}</div>
+                    {sel && idx >= 4 && <div style={{fontSize:10,color:'var(--warm)',marginTop:2}}>+$20</div>}
+                    {sel && <span className="check">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {step===3 && (
+          <>
+            <h3>Step 4：選擇點綴</h3>
+            <p>選一種點綴配料</p>
+            <div className="opt-grid col3">
+              {data.garnishes.map(g=>(
+                <button key={g} className={`opt-card${garnish===g?' selected':''}`} onClick={()=>setGarnish(g)}>
+                  <div className="opt-card-name">{g}</div>
+                  {garnish===g && <span className="check">✓</span>}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {step===4 && (
+          <>
+            <h3>Step 5：選擇醬料</h3>
+            <p>至少選 1 種（已選 {dressing.length}）
+              {extraDressingCount > 0 && <span style={{color:'var(--warm)',fontWeight:600}}>　加選 {extraDressingCount} 種 +${extraDressingCount*20}</span>}
+            </p>
+            <div style={{fontSize:12,color:'var(--warm)',marginBottom:12,background:'var(--warm-light)',padding:'8px 12px',borderRadius:'var(--radius-sm)'}}>
+              第 1 種含在內，第 2 種起每種 +$20
+            </div>
+            <div className="opt-grid">
+              {data.dressings.map(d=>{
+                const sel = dressing.includes(d);
+                const idx = dressing.indexOf(d);
+                return (
+                  <button key={d} className={`opt-card${sel?' selected':''}`} onClick={()=>toggleDressing(d)}>
+                    <div className="opt-card-name" style={{fontSize:13}}>{d}</div>
+                    {sel && idx >= 1 && <div style={{fontSize:10,color:'var(--warm)',marginTop:2}}>+$20</div>}
+                    {sel && <span className="check">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {dressing.length>0 && (
+              <>
+                <h3 style={{marginTop:20}}>加購區（選填）</h3>
+                <p style={{marginBottom:8}}>加購額外蛋白質</p>
+                <div className="opt-grid">
+                  {data.addons.proteins.map(a=>{
+                    const sel = addons.some(x=>x.name===a.name);
+                    return (
+                      <button key={a.name} className={`opt-card${sel?' selected':''}`} onClick={()=>toggleAddon(a)}>
+                        <div className="opt-card-name" style={{fontSize:13}}>{a.name}</div>
+                        <div className="opt-card-price">+{fmtPrice(a.price)}</div>
+                        {sel && <span className="check">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p style={{marginTop:12,marginBottom:8}}>其他加購</p>
+                <div className="opt-grid col3">
+                  {data.addons.others.map(a=>{
+                    const sel = addons.some(x=>x.name===a.name);
+                    return (
+                      <button key={a.name} className={`opt-card${sel?' selected':''}`} onClick={()=>toggleAddon(a)}>
+                        <div className="opt-card-name" style={{fontSize:13}}>{a.name}</div>
+                        <div className="opt-card-price">+{fmtPrice(a.price)}</div>
+                        {sel && <span className="check">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <h3 style={{marginTop:20}}>搭配套餐（選填）</h3>
+                <p>加購飲料＋點心組合</p>
+                <div className="combo-grid">
+                  {combos.map(c=>(
+                    <button key={c.id} className={`combo-card${combo?.id===c.id?' selected':''}`}
+                      onClick={()=>setCombo(combo?.id===c.id?null:c)}>
+                      <div className="combo-card-label">套餐 {c.label}</div>
+                      <div className="combo-card-price">+{fmtPrice(c.price)}</div>
+                      <div className="combo-card-desc">{c.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="wizard-footer">
+        {step>0 && <button className="wizard-back" onClick={()=>setStep(step-1)}>上一步</button>}
+        {step<4 ? (
+          <button className="wizard-next" disabled={!canNext()} onClick={()=>setStep(step+1)}>
+            下一步　{step===0 && base ? fmtPrice(base.price) : ''}
+          </button>
+        ) : (
+          <button className="wizard-next" disabled={!canNext()} onClick={handleSubmit}>
+            加入訂單　{fmtPrice(totalPrice)}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<App/>, document.getElementById('root'));
+</script>
+</body>
+</html>
