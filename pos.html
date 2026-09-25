@@ -214,17 +214,17 @@ input,textarea{font-family:inherit}
 
   /* Sidebar → top horizontal bar */
   .sidebar{width:100%;flex-direction:row;overflow-x:auto;flex-shrink:0;
-    -webkit-overflow-scrolling:touch;scrollbar-width:none}
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity}
   .sidebar::-webkit-scrollbar{display:none}
   .sidebar-logo{padding:10px 12px;border-bottom:none;border-right:1px solid rgba(255,255,255,.15);
-    display:flex;align-items:center;gap:6px;white-space:nowrap}
+    display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0}
   .sidebar-logo svg{display:inline;margin:0}
   .cat-btn{padding:10px 14px;white-space:nowrap;border-left:none;border-bottom:3px solid transparent;
-    display:flex;align-items:center;gap:4px;font-size:13px}
+    display:flex;align-items:center;gap:4px;font-size:13px;flex-shrink:0;scroll-snap-align:start}
   .cat-btn.active{border-left-color:transparent;border-bottom-color:#fff}
   .cat-btn .icon{display:inline;font-size:16px;margin-bottom:0}
-  .sidebar-bottom{margin-top:0;margin-left:auto;border-top:none;border-left:1px solid rgba(255,255,255,.15);
-    display:flex;align-items:center}
+  .sidebar-bottom{border-top:none;border-left:1px solid rgba(255,255,255,.15);
+    display:flex;align-items:center;flex-shrink:0;margin-top:0;margin-left:0}
   .sidebar-bottom .cat-btn{padding:10px 12px;font-size:12px}
 
   /* Center takes full width */
@@ -459,7 +459,8 @@ function App(){
           ZOZO POS
         </div>
         {MENU.cats.map(c=>(
-          <button key={c.id} className={`cat-btn${cat===c.id?' active':''}`} onClick={()=>setCat(c.id)}>
+          <button key={c.id} ref={el=>{if(el&&cat===c.id)el.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})}}
+            className={`cat-btn${cat===c.id?' active':''}`} onClick={()=>setCat(c.id)}>
             <span className="icon">{c.icon}</span>{c.name}
           </button>
         ))}
