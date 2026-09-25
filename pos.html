@@ -354,6 +354,8 @@ function loadSoldOut(){try{return JSON.parse(localStorage.getItem('zozo_soldout'
 function saveSoldOut(s){localStorage.setItem('zozo_soldout',JSON.stringify(s))}
 function loadMarketPrices(){try{return JSON.parse(localStorage.getItem('zozo_market_prices')||'{}')}catch{return{}}}
 function saveMarketPrices(p){localStorage.setItem('zozo_market_prices',JSON.stringify(p))}
+function loadMarketNames(){try{return JSON.parse(localStorage.getItem('zozo_market_names')||'{}')}catch{return{}}}
+function saveMarketNames(n){localStorage.setItem('zozo_market_names',JSON.stringify(n))}
 
 /* ─── App ─── */
 function App(){
@@ -369,6 +371,7 @@ function App(){
   const [orders,setOrders]=useState(loadOrders());
   const [soldOut,setSoldOut]=useState(loadSoldOut());
   const [marketPrices,setMarketPrices]=useState(loadMarketPrices());
+  const [marketNames,setMarketNames]=useState(loadMarketNames());
 
   const totalQty=cart.reduce((s,i)=>s+i.qty,0);
   const totalPrice=cart.reduce((s,i)=>s+i.price*i.qty,0);
@@ -403,8 +406,9 @@ function App(){
     if(soldOut.includes(item.id))return;
     if(item.mp){
       const p=marketPrices[item.id];
-      if(!p)return; // no price set yet
-      addToCart({id:item.id,name:item.name,price:p,detail:'時價'});
+      if(!p)return;
+      const mName=marketNames[item.id];
+      addToCart({id:item.id,name:item.name+(mName?'（'+mName+'）':''),price:p,detail:'時價'});
       return;
     }
     if(item.dress||item.jam||item.cheese||item.drk){
@@ -529,7 +533,7 @@ function App(){
                 const inCart=cart.filter(c=>c.id===item.id).reduce((s,c)=>s+c.qty,0);
                 return(
                   <button key={item.id} className={`item-btn${so?' soldout':''}`} onClick={()=>handleItem(item)}>
-                    <div className="name">{item.name}</div>
+                    <div className="name">{item.name}{item.mp&&marketNames[item.id]?<div style={{fontSize:10,color:'var(--gray)',marginTop:1}}>{marketNames[item.id]}</div>:null}</div>
                     <div className="price">{item.mp?(marketPrices[item.id]?fmt(marketPrices[item.id]):'未定價'):fmt(item.price)}</div>
                     {inCart>0 && <span className="qty-badge">{inCart}</span>}
                   </button>
@@ -650,12 +654,19 @@ function App(){
                     {MENU.cats.find(c=>c.id===catKey)?.name}
                   </div>
                   {items.map(item=>item.mp?(
-                    <div className="soldout-item" key={item.id}>
-                      <span>{item.name}</span>
+                    <div className="soldout-item" key={item.id} style={{flexWrap:'wrap',gap:6}}>
+                      <span style={{width:'100%',fontWeight:600}}>{item.name}</span>
+                      <input type="text" value={marketNames[item.id]||''} placeholder="今日品項名稱"
+                        style={{flex:1,padding:'6px 8px',border:'1px solid var(--light-gray)',borderRadius:4,fontSize:13}}
+                        onChange={e=>{
+                          const next={...marketNames,[item.id]:e.target.value||undefined};
+                          if(!e.target.value)delete next[item.id];
+                          setMarketNames(next);saveMarketNames(next);
+                        }}/>
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
                         <span style={{fontSize:12,color:'var(--gray)'}}>$</span>
                         <input type="number" value={marketPrices[item.id]||''} placeholder="定價"
-                          style={{width:60,padding:'4px 8px',border:'1px solid var(--light-gray)',borderRadius:4,fontSize:13,textAlign:'right'}}
+                          style={{width:60,padding:'6px 8px',border:'1px solid var(--light-gray)',borderRadius:4,fontSize:13,textAlign:'right'}}
                           onChange={e=>{
                             const v=parseInt(e.target.value)||0;
                             const next={...marketPrices,[item.id]:v||undefined};
