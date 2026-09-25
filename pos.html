@@ -498,7 +498,15 @@ function App(){
       {/* Center */}
       <div className="center">
         <div className="center-header">
-          <span className="center-title">{MENU.cats.find(c=>c.id===cat)?.icon} {MENU.cats.find(c=>c.id===cat)?.name}</span>
+          <span className="center-title">{MENU.cats.find(c=>c.id===cat)?.name}</span>
+          <div style={{display:'flex',borderRadius:6,overflow:'hidden',border:'1.5px solid var(--light-gray)',marginLeft:6}}>
+            <button style={{padding:'4px 12px',fontSize:12,fontWeight:600,
+              background:orderType==='dine'?'var(--blue)':'#fff',
+              color:orderType==='dine'?'#fff':'var(--gray)'}} onClick={()=>setOrderType('dine')}>內用</button>
+            <button style={{padding:'4px 12px',fontSize:12,fontWeight:600,
+              background:orderType==='take'?'var(--warm)':'#fff',
+              color:orderType==='take'?'#fff':'var(--gray)'}} onClick={()=>setOrderType('take')}>外帶</button>
+          </div>
           <span className={`center-badge ${true?'open':'closed'}`}>今日 {fmt(todayRevenue)}</span>
           <div className="center-actions">
             <button className="alert" onClick={()=>setShowOrders(true)}>
