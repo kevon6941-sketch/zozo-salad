@@ -53,11 +53,11 @@ input,textarea{font-family:inherit}
 .menu-area{flex:1;overflow-y:auto;padding:10px;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;min-height:100%}
 .item-btn{background:#fff;border:1.5px solid var(--light-gray);border-radius:var(--radius);
-  padding:12px 8px;text-align:center;transition:all .12s;position:relative;min-height:80px;
+  padding:8px 6px;text-align:center;transition:all .12s;position:relative;min-height:56px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:pan-y}
 .item-btn:active{transform:scale(.96)}
-.item-btn .name{font-size:14px;font-weight:600;margin-bottom:2px}
-.item-btn .price{font-size:13px;color:var(--sage-dark);font-weight:600}
+.item-btn .name{font-size:13px;font-weight:600;margin-bottom:1px}
+.item-btn .price{font-size:12px;color:var(--sage-dark);font-weight:600}
 .item-btn .qty-badge{position:absolute;top:-6px;right:-6px;width:22px;height:22px;
   border-radius:50%;background:var(--sage);color:#fff;font-size:12px;font-weight:700;
   display:flex;align-items:center;justify-content:center}
@@ -67,8 +67,8 @@ input,textarea{font-family:inherit}
 
 /* Custom salad entry */
 .custom-btn{background:linear-gradient(135deg,var(--sage-light),#dce8d6);
-  border:2px solid var(--sage);grid-column:span 2;min-height:80px}
-.custom-btn .name{color:var(--sage-dark);font-size:15px}
+  border:2px solid var(--sage);grid-column:span 2;min-height:56px}
+.custom-btn .name{color:var(--sage-dark);font-size:14px}
 
 /* Right panel - cart */
 .cart-panel{width:280px;background:#fff;border-left:1px solid var(--light-gray);
@@ -442,6 +442,19 @@ function App(){
 
   const items=cat==='custom'?[]:MENU.items[cat]||[];
 
+  /* Swipe to change category */
+  const touchRef=useRef({x:0,y:0});
+  const handleTouchStart=(e)=>{touchRef.current={x:e.touches[0].clientX,y:e.touches[0].clientY}};
+  const handleTouchEnd=(e)=>{
+    const dx=e.changedTouches[0].clientX-touchRef.current.x;
+    const dy=e.changedTouches[0].clientY-touchRef.current.y;
+    if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx))return; // too short or vertical
+    const catIds=MENU.cats.map(c=>c.id);
+    const idx=catIds.indexOf(cat);
+    if(dx<0&&idx<catIds.length-1)setCat(catIds[idx+1]); // swipe left → next
+    if(dx>0&&idx>0)setCat(catIds[idx-1]); // swipe right → prev
+  };
+
   return(
     <div className="app">
       {/* Sidebar */}
@@ -482,7 +495,7 @@ function App(){
             </button>
           </div>
         </div>
-        <div className="menu-area">
+        <div className="menu-area" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           {cat==='custom' ? (
             <div className="menu-grid">
               <button className="item-btn custom-btn" onClick={()=>setWizard(true)}>
