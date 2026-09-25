@@ -509,22 +509,15 @@ function App(){
         </div>
         <div className="menu-area" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           {cat==='custom' ? (
-            <div className="menu-grid">
-              {MENU.custom.bases.map(b=>
-                b.subs ? b.subs.map(sub=>(
-                  <button key={b.id+'_'+sub} className="item-btn" style={{borderColor:'var(--sage)',borderWidth:2}}
-                    onClick={()=>setWizard({base:b,baseSub:sub,step:1})}>
-                    <div className="name">{sub}</div>
-                    <div className="price">{fmt(b.price)}</div>
-                  </button>
-                )) : (
-                  <button key={b.id} className="item-btn" style={{borderColor:'var(--sage)',borderWidth:2}}
-                    onClick={()=>setWizard({base:b,baseSub:'',step:1})}>
-                    <div className="name">{b.name}</div>
-                    <div className="price">{fmt(b.price)}</div>
-                  </button>
-                )
-              )}
+            <div style={{maxWidth:500}}>
+              <div style={{textAlign:'center',marginBottom:12}}>
+                <div style={{fontSize:15,fontWeight:700,color:'var(--sage-dark)'}}>🥗 自選系列</div>
+                <div style={{fontSize:12,color:'var(--gray)'}}>選基底 → 蛋白質 → 配菜 → 點綴 → 醬料</div>
+              </div>
+              {MENU.custom.bases.map((b,i)=>(
+                <CustomBaseCard key={b.id} base={b} index={i}
+                  onSelect={(base,sub)=>setWizard({base,baseSub:sub,step:1})}/>
+              ))}
             </div>
           ) : (
             <div className="menu-grid">
@@ -1006,6 +999,50 @@ function SaladWizard({data,combos,soldOut=[],onAdd,onClose,init}){
         </div>
       </div>
     </div>
+  );
+}
+
+/* ─── Custom Base Card ─── */
+function CustomBaseCard({base,index,onSelect}){
+  const [expanded,setExpanded]=useState(false);
+  const hasSubs=!!base.subs;
+
+  const handleClick=()=>{
+    if(hasSubs){setExpanded(!expanded);}
+    else{onSelect(base,'');}
+  };
+
+  return(
+    <button style={{
+      display:'block',width:'100%',background:'#fff',border:'2px solid var(--light-gray)',
+      borderRadius:'var(--radius)',padding:14,marginBottom:8,textAlign:'left',
+      transition:'all .15s',borderColor:expanded?'var(--sage)':'var(--light-gray)'
+    }} onClick={handleClick}>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        <span style={{width:30,height:30,borderRadius:'50%',background:'var(--sage)',color:'#fff',
+          display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:700,flexShrink:0}}>
+          {index+1}
+        </span>
+        <span style={{flex:1,fontSize:15,fontWeight:600}}>{base.name}</span>
+        <span style={{fontSize:17,fontWeight:700,color:'var(--sage-dark)'}}>{fmt(base.price)}</span>
+      </div>
+      {hasSubs&&expanded&&(
+        <div style={{display:'flex',gap:8,marginTop:10}} onClick={e=>e.stopPropagation()}>
+          {base.subs.map(s=>(
+            <button key={s} style={{
+              flex:1,padding:10,borderRadius:'var(--radius-sm)',fontSize:14,fontWeight:600,
+              border:'2px solid var(--sage)',background:'var(--sage-light)',color:'var(--sage-dark)',
+              transition:'all .12s'
+            }}
+            onMouseDown={e=>e.currentTarget.style.background='var(--sage)'}
+            onMouseUp={e=>e.currentTarget.style.background='var(--sage-light)'}
+            onClick={()=>onSelect(base,s)}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </button>
   );
 }
 
