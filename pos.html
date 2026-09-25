@@ -289,13 +289,13 @@ const MENU = {
       {name:'香酥雞',p:65},{name:'巴沙魚',p:65},{name:'白蝦',p:85},{name:'鮭魚',p:90}],
   },
   cats:[
-    {id:'custom',name:'自選沙拉',icon:'🥗'},
-    {id:'salad',name:'配好沙拉',icon:'🥬'},
-    {id:'sandwich',name:'熱壓吐司',icon:'🥪'},
-    {id:'yogurt',name:'優格',icon:'🫐'},
-    {id:'drink',name:'喝的',icon:'🧋'},
-    {id:'waffle',name:'鬆餅',icon:'🧇'},
-    {id:'extra',name:'單點',icon:'🍚'},
+    {id:'custom',name:'自選沙拉',icon:''},
+    {id:'salad',name:'配好沙拉',icon:''},
+    {id:'sandwich',name:'熱壓吐司',icon:''},
+    {id:'yogurt',name:'優格',icon:''},
+    {id:'drink',name:'喝的',icon:''},
+    {id:'waffle',name:'鬆餅',icon:''},
+    {id:'extra',name:'單點',icon:''},
   ],
   items:{
     salad:[
@@ -491,7 +491,7 @@ function App(){
           </button>
         ))}
         <div className="sidebar-bottom">
-          <button className="cat-btn" onClick={()=>setShowSoldout(true)}>⚙️ 售完管理</button>
+          <button className="cat-btn" onClick={()=>setShowSoldout(true)}>售完管理</button>
         </div>
       </div>
 
@@ -502,7 +502,7 @@ function App(){
           <span className={`center-badge ${true?'open':'closed'}`}>今日 {fmt(todayRevenue)}</span>
           <div className="center-actions">
             <button className="alert" onClick={()=>setShowOrders(true)}>
-              📋 訂單 ({todayOrders.length})
+              訂單 ({todayOrders.length})
               {todayOrders.filter(o=>o.source!=='pos').length>0 && <span className="dot"/>}
             </button>
           </div>
@@ -511,7 +511,7 @@ function App(){
           {cat==='custom' ? (
             <div style={{maxWidth:500}}>
               <div style={{textAlign:'center',marginBottom:12}}>
-                <div style={{fontSize:15,fontWeight:700,color:'var(--sage-dark)'}}>🥗 自選系列</div>
+                <div style={{fontSize:15,fontWeight:700,color:'var(--sage-dark)'}}>自選系列</div>
                 <div style={{fontSize:12,color:'var(--gray)'}}>選基底 → 蛋白質 → 配菜 → 點綴 → 醬料</div>
               </div>
               {MENU.custom.bases.map((b,i)=>(
@@ -543,8 +543,8 @@ function App(){
       {/* Right cart panel (portrait: bottom drawer) */}
       <div className={`cart-panel${showCartDrawer?' show':''}`}>
         <div className="cart-type">
-          <button className={orderType==='dine'?'active-dine':''} onClick={()=>setOrderType('dine')}>🍽 內用</button>
-          <button className={orderType==='take'?'active-take':''} onClick={()=>setOrderType('take')}>🥡 外帶</button>
+          <button className={orderType==='dine'?'active-dine':''} onClick={()=>setOrderType('dine')}>內用</button>
+          <button className={orderType==='take'?'active-take':''} onClick={()=>setOrderType('take')}>外帶</button>
         </div>
         <div className="cart-list" style={{maxHeight:showCartDrawer?'35vh':undefined}}>
           {cart.length===0 ? (
@@ -682,7 +682,7 @@ function App(){
 
               {/* Custom salad - proteins */}
               <div style={{fontSize:13,fontWeight:700,color:'var(--sage-dark)',margin:'14px 0 6px'}}>
-                🥗 自選沙拉 — 蛋白質
+                自選沙拉 — 蛋白質
               </div>
               {MENU.custom.proteins.map(p=>(
                 <div className="soldout-item" key={'cp_'+p.name}>
@@ -694,7 +694,7 @@ function App(){
 
               {/* Custom salad - ingredients */}
               <div style={{fontSize:13,fontWeight:700,color:'var(--sage-dark)',margin:'14px 0 6px'}}>
-                🥗 自選沙拉 — 配菜
+                自選沙拉 — 配菜
               </div>
               {MENU.custom.ingredients.map(ig=>(
                 <div className="soldout-item" key={'ci_'+ig}>
@@ -706,7 +706,7 @@ function App(){
 
               {/* Custom salad - garnishes */}
               <div style={{fontSize:13,fontWeight:700,color:'var(--sage-dark)',margin:'14px 0 6px'}}>
-                🥗 自選沙拉 — 點綴
+                自選沙拉 — 點綴
               </div>
               {MENU.custom.garnishes.map(g=>(
                 <div className="soldout-item" key={'cg_'+g}>
@@ -718,7 +718,7 @@ function App(){
 
               {/* Custom salad - dressings */}
               <div style={{fontSize:13,fontWeight:700,color:'var(--sage-dark)',margin:'14px 0 6px'}}>
-                🥗 自選沙拉 — 醬料
+                自選沙拉 — 醬料
               </div>
               {MENU.custom.dressings.map(d=>(
                 <div className="soldout-item" key={'cd_'+d}>
