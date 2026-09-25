@@ -352,12 +352,14 @@ function loadOrders(){try{return JSON.parse(localStorage.getItem('zozo_orders')|
 function saveOrders(o){localStorage.setItem('zozo_orders',JSON.stringify(o))}
 function loadSoldOut(){try{return JSON.parse(localStorage.getItem('zozo_soldout')||'[]')}catch{return[]}}
 function saveSoldOut(s){localStorage.setItem('zozo_soldout',JSON.stringify(s))}
+function loadMarketPrices(){try{return JSON.parse(localStorage.getItem('zozo_market_prices')||'{}')}catch{return{}}}
+function saveMarketPrices(p){localStorage.setItem('zozo_market_prices',JSON.stringify(p))}
 
 /* ─── App ─── */
 function App(){
   const [cat,setCat]=useState('custom');
   const [cart,setCart]=useState([]);
-  const [orderType,setOrderType]=useState('dine'); // dine | take
+  const [orderType,setOrderType]=useState('dine');
   const [note,setNote]=useState('');
   const [wizard,setWizard]=useState(false);
   const [optModal,setOptModal]=useState(null);
@@ -366,6 +368,7 @@ function App(){
   const [showCartDrawer,setShowCartDrawer]=useState(false);
   const [orders,setOrders]=useState(loadOrders());
   const [soldOut,setSoldOut]=useState(loadSoldOut());
+  const [marketPrices,setMarketPrices]=useState(loadMarketPrices());
 
   const totalQty=cart.reduce((s,i)=>s+i.qty,0);
   const totalPrice=cart.reduce((s,i)=>s+i.price*i.qty,0);
@@ -397,8 +400,13 @@ function App(){
   },[]);
 
   const handleItem=(item)=>{
-    if(item.mp)return;
     if(soldOut.includes(item.id))return;
+    if(item.mp){
+      const p=marketPrices[item.id];
+      if(!p)return; // no price set yet
+      addToCart({id:item.id,name:item.name,price:p,detail:'時價'});
+      return;
+    }
     if(item.dress||item.jam||item.cheese||item.drk){
       setOptModal(item);
     } else {
@@ -498,16 +506,21 @@ function App(){
         <div className="menu-area" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           {cat==='custom' ? (
             <div className="menu-grid">
-              <button className="item-btn custom-btn" onClick={()=>setWizard(true)}>
-                <div className="name">🥗 組合自選沙拉</div>
-                <div className="price">$140 起</div>
-              </button>
-              {MENU.custom.bases.map(b=>(
-                <button key={b.id} className="item-btn" onClick={()=>setWizard(true)}>
-                  <div className="name">{b.name}</div>
-                  <div className="price">{fmt(b.price)}</div>
-                </button>
-              ))}
+              {MENU.custom.bases.map(b=>
+                b.subs ? b.subs.map(sub=>(
+                  <button key={b.id+'_'+sub} className="item-btn" style={{borderColor:'var(--sage)',borderWidth:2}}
+                    onClick={()=>setWizard({base:b,baseSub:sub,step:1})}>
+                    <div className="name">{sub}</div>
+                    <div className="price">{fmt(b.price)}</div>
+                  </button>
+                )) : (
+                  <button key={b.id} className="item-btn" style={{borderColor:'var(--sage)',borderWidth:2}}
+                    onClick={()=>setWizard({base:b,baseSub:'',step:1})}>
+                    <div className="name">{b.name}</div>
+                    <div className="price">{fmt(b.price)}</div>
+                  </button>
+                )
+              )}
             </div>
           ) : (
             <div className="menu-grid">
@@ -517,7 +530,7 @@ function App(){
                 return(
                   <button key={item.id} className={`item-btn${so?' soldout':''}`} onClick={()=>handleItem(item)}>
                     <div className="name">{item.name}</div>
-                    <div className="price">{item.mp?'時價':fmt(item.price)}</div>
+                    <div className="price">{item.mp?(marketPrices[item.id]?fmt(marketPrices[item.id]):'未定價'):fmt(item.price)}</div>
                     {inCart>0 && <span className="qty-badge">{inCart}</span>}
                   </button>
                 );
@@ -583,7 +596,8 @@ function App(){
       {optModal && <QuickOptModal item={optModal} menu={MENU} onAdd={addFromOpt} onClose={()=>setOptModal(null)}/>}
 
       {/* Custom salad wizard */}
-      {wizard && <SaladWizard data={MENU.custom} combos={MENU.combos} onAdd={addCustom} onClose={()=>setWizard(false)}/>}
+      {wizard && <SaladWizard data={MENU.custom} combos={MENU.combos} soldOut={soldOut}
+        init={typeof wizard==='object'?wizard:null} onAdd={addCustom} onClose={()=>setWizard(false)}/>}
 
       {/* Orders panel */}
       {showOrders && (
@@ -619,28 +633,94 @@ function App(){
         </div>
       )}
 
-      {/* Soldout management */}
+      {/* Soldout & price management */}
       {showSoldout && (
         <div className="soldout-modal">
           <div className="soldout-modal-bg" onClick={()=>setShowSoldout(false)}/>
           <div className="soldout-content">
             <div className="soldout-header">
-              <h2>售完管理</h2>
+              <h2>售完 / 時價管理</h2>
               <button onClick={()=>setShowSoldout(false)} style={{fontSize:14,color:'var(--gray)'}}>✕</button>
             </div>
             <div className="soldout-body">
+              {/* Regular menu items */}
               {Object.entries(MENU.items).map(([catKey,items])=>(
                 <div key={catKey}>
                   <div style={{fontSize:13,fontWeight:700,color:'var(--sage-dark)',margin:'10px 0 6px'}}>
                     {MENU.cats.find(c=>c.id===catKey)?.name}
                   </div>
-                  {items.filter(i=>!i.mp).map(item=>(
+                  {items.map(item=>item.mp?(
+                    <div className="soldout-item" key={item.id}>
+                      <span>{item.name}</span>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontSize:12,color:'var(--gray)'}}>$</span>
+                        <input type="number" value={marketPrices[item.id]||''} placeholder="定價"
+                          style={{width:60,padding:'4px 8px',border:'1px solid var(--light-gray)',borderRadius:4,fontSize:13,textAlign:'right'}}
+                          onChange={e=>{
+                            const v=parseInt(e.target.value)||0;
+                            const next={...marketPrices,[item.id]:v||undefined};
+                            if(!v)delete next[item.id];
+                            setMarketPrices(next);saveMarketPrices(next);
+                          }}/>
+                        <button className={`toggle${soldOut.includes(item.id)?' on':''}`}
+                          onClick={()=>toggleSoldOut(item.id)}/>
+                      </div>
+                    </div>
+                  ):(
                     <div className="soldout-item" key={item.id}>
                       <span>{item.name}　{fmt(item.price)}</span>
                       <button className={`toggle${soldOut.includes(item.id)?' on':''}`}
                         onClick={()=>toggleSoldOut(item.id)}/>
                     </div>
                   ))}
+                </div>
+              ))}
+
+              {/* Custom salad - proteins */}
+              <div style={{fontSize:13,fontWeight:700,color:'var(--sage-dark)',margin:'14px 0 6px'}}>
+                🥗 自選沙拉 — 蛋白質
+              </div>
+              {MENU.custom.proteins.map(p=>(
+                <div className="soldout-item" key={'cp_'+p.name}>
+                  <span>{p.name}　{p.extra>0?`+$${p.extra}`:'+$0'}</span>
+                  <button className={`toggle${soldOut.includes('cp_'+p.name)?' on':''}`}
+                    onClick={()=>toggleSoldOut('cp_'+p.name)}/>
+                </div>
+              ))}
+
+              {/* Custom salad - ingredients */}
+              <div style={{fontSize:13,fontWeight:700,color:'var(--sage-dark)',margin:'14px 0 6px'}}>
+                🥗 自選沙拉 — 配菜
+              </div>
+              {MENU.custom.ingredients.map(ig=>(
+                <div className="soldout-item" key={'ci_'+ig}>
+                  <span>{ig}</span>
+                  <button className={`toggle${soldOut.includes('ci_'+ig)?' on':''}`}
+                    onClick={()=>toggleSoldOut('ci_'+ig)}/>
+                </div>
+              ))}
+
+              {/* Custom salad - garnishes */}
+              <div style={{fontSize:13,fontWeight:700,color:'var(--sage-dark)',margin:'14px 0 6px'}}>
+                🥗 自選沙拉 — 點綴
+              </div>
+              {MENU.custom.garnishes.map(g=>(
+                <div className="soldout-item" key={'cg_'+g}>
+                  <span>{g}</span>
+                  <button className={`toggle${soldOut.includes('cg_'+g)?' on':''}`}
+                    onClick={()=>toggleSoldOut('cg_'+g)}/>
+                </div>
+              ))}
+
+              {/* Custom salad - dressings */}
+              <div style={{fontSize:13,fontWeight:700,color:'var(--sage-dark)',margin:'14px 0 6px'}}>
+                🥗 自選沙拉 — 醬料
+              </div>
+              {MENU.custom.dressings.map(d=>(
+                <div className="soldout-item" key={'cd_'+d}>
+                  <span>{d}</span>
+                  <button className={`toggle${soldOut.includes('cd_'+d)?' on':''}`}
+                    onClick={()=>toggleSoldOut('cd_'+d)}/>
                 </div>
               ))}
             </div>
@@ -734,10 +814,10 @@ function QuickOptModal({item,menu,onAdd,onClose}){
 }
 
 /* ─── Custom Salad Wizard ─── */
-function SaladWizard({data,combos,onAdd,onClose}){
-  const [step,setStep]=useState(0);
-  const [base,setBase]=useState(null);
-  const [baseSub,setBaseSub]=useState('');
+function SaladWizard({data,combos,soldOut=[],onAdd,onClose,init}){
+  const [step,setStep]=useState(init?.step||0);
+  const [base,setBase]=useState(init?.base||null);
+  const [baseSub,setBaseSub]=useState(init?.baseSub||'');
   const [protein,setProtein]=useState(null);
   const [ings,setIngs]=useState([]);
   const [garnish,setGarnish]=useState('');
@@ -805,12 +885,17 @@ function SaladWizard({data,combos,onAdd,onClose}){
             <>
               <h3>Step 2：蛋白質</h3>
               <div className="opt-grid col4">
-                {data.proteins.map(p=>(
-                  <button key={p.name} className={`opt-card${protein?.name===p.name?' sel':''}`} onClick={()=>setProtein(p)}>
-                    {p.name}<div className="extra">{p.extra>0?`+$${p.extra}`:'+$0'}</div>
-                    {protein?.name===p.name&&<span className="check">✓</span>}
-                  </button>
-                ))}
+                {data.proteins.map(p=>{
+                  const so=soldOut.includes('cp_'+p.name);
+                  return(
+                    <button key={p.name} className={`opt-card${protein?.name===p.name?' sel':''}`}
+                      style={so?{opacity:.3,pointerEvents:'none'}:{}} onClick={()=>setProtein(p)}>
+                      {p.name}{so&&<div style={{fontSize:10,color:'var(--red)'}}>售完</div>}
+                      {!so&&<div className="extra">{p.extra>0?`+$${p.extra}`:'+$0'}</div>}
+                      {protein?.name===p.name&&<span className="check">✓</span>}
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}
@@ -821,9 +906,12 @@ function SaladWizard({data,combos,onAdd,onClose}){
               <div className="opt-grid col5">
                 {data.ingredients.map(ig=>{
                   const sel=ings.includes(ig),idx=ings.indexOf(ig);
+                  const so=soldOut.includes('ci_'+ig);
                   return(
-                    <button key={ig} className={`opt-card${sel?' sel':''}`} onClick={()=>toggleIng(ig)}>
-                      {ig}{sel&&idx>=4&&<div className="extra">+$20</div>}
+                    <button key={ig} className={`opt-card${sel?' sel':''}`}
+                      style={so?{opacity:.3,pointerEvents:'none'}:{}} onClick={()=>toggleIng(ig)}>
+                      {ig}{so&&<div style={{fontSize:10,color:'var(--red)'}}>售完</div>}
+                      {sel&&idx>=4&&!so&&<div className="extra">+$20</div>}
                       {sel&&<span className="check">✓</span>}
                     </button>
                   );
@@ -835,11 +923,16 @@ function SaladWizard({data,combos,onAdd,onClose}){
             <>
               <h3>Step 4：點綴</h3>
               <div className="opt-grid col3">
-                {data.garnishes.map(g=>(
-                  <button key={g} className={`opt-card${garnish===g?' sel':''}`} onClick={()=>setGarnish(g)}>
-                    {g}{garnish===g&&<span className="check">✓</span>}
-                  </button>
-                ))}
+                {data.garnishes.map(g=>{
+                  const so=soldOut.includes('cg_'+g);
+                  return(
+                    <button key={g} className={`opt-card${garnish===g?' sel':''}`}
+                      style={so?{opacity:.3,pointerEvents:'none'}:{}} onClick={()=>setGarnish(g)}>
+                      {g}{so&&<div style={{fontSize:10,color:'var(--red)'}}>售完</div>}
+                      {garnish===g&&<span className="check">✓</span>}
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}
@@ -850,9 +943,12 @@ function SaladWizard({data,combos,onAdd,onClose}){
               <div className="opt-grid col3">
                 {data.dressings.map(d=>{
                   const sel=dress.includes(d),idx=dress.indexOf(d);
+                  const so=soldOut.includes('cd_'+d);
                   return(
-                    <button key={d} className={`opt-card${sel?' sel':''}`} onClick={()=>toggleDress(d)}>
-                      {d}{sel&&idx>=1&&<div className="extra">+$20</div>}
+                    <button key={d} className={`opt-card${sel?' sel':''}`}
+                      style={so?{opacity:.3,pointerEvents:'none'}:{}} onClick={()=>toggleDress(d)}>
+                      {d}{so&&<div style={{fontSize:10,color:'var(--red)'}}>售完</div>}
+                      {sel&&idx>=1&&!so&&<div className="extra">+$20</div>}
                       {sel&&<span className="check">✓</span>}
                     </button>
                   );
