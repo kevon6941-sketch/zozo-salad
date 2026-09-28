@@ -216,7 +216,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .welcome{position:fixed;inset:0;z-index:9999;background:var(--cream);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:32px;text-align:center;animation:fadeIn .5s}
-.welcome-logo{width:160px;height:160px;margin-bottom:24px;
+.welcome-logo{width:260px;height:auto;margin-bottom:24px;
   animation:welcomeBounce 1s ease-out;filter:drop-shadow(0 4px 12px rgba(107,142,90,.25))}
 @keyframes welcomeBounce{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
 .welcome h1{font-size:28px;font-weight:800;color:var(--sage-dark);margin-bottom:6px;letter-spacing:1px}
@@ -485,10 +485,8 @@ function App(){
 
   if(welcome) return (
     <div className={`welcome${welcomeFading?' welcome-fade':''}`}>
-      <img src="logo.png" className="welcome-logo" alt="ZOZO Salad"/>
-      <h1>左左沙拉製作所</h1>
-      <div className="welcome-sub">Fresh &amp; Healthy</div>
-      <div className="welcome-cn">ZOZO Salad</div>
+      <img src="welcome-logo.png" className="welcome-logo" alt="ZOZO Salad"/>
+      <div style={{height:24}}></div>
       <button className="welcome-btn" onClick={enterMenu}>開始點餐</button>
     </div>
   );
