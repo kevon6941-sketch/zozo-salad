@@ -385,15 +385,15 @@ function App(){
     return ()=>clearInterval(iv);
   },[]);
 
-  /* Scroll spy: auto-highlight tab on scroll */
+  /* Scroll spy: auto-highlight tab on scroll (wait until welcome dismissed) */
   useEffect(()=>{
+    if(welcome) return;
     const ids = MENU.categories.map(c=>'sec-'+c.id);
     const observer = new IntersectionObserver((entries)=>{
       for(const e of entries){
         if(e.isIntersecting && e.intersectionRatio>0.2){
           const id = e.target.id.replace('sec-','');
           setCat(id);
-          // scroll tab into view
           const tab = document.querySelector(`.tab[data-cat="${id}"]`);
           if(tab) tab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
         }
@@ -401,7 +401,7 @@ function App(){
     },{threshold:0.2, rootMargin:'-80px 0px -60% 0px'});
     ids.forEach(id=>{ const el=document.getElementById(id); if(el) observer.observe(el); });
     return ()=>observer.disconnect();
-  },[]);
+  },[welcome]);
 
   const totalQty = cart.reduce((s,i)=>s+i.qty,0);
   const totalPrice = cart.reduce((s,i)=>s+i.price*i.qty,0);
