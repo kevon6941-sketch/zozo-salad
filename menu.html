@@ -211,6 +211,23 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .empty{text-align:center;padding:40px 20px;color:var(--gray)}
 .empty-icon{font-size:48px;margin-bottom:12px}
 .empty p{font-size:14px}
+
+/* Welcome screen */
+.welcome{position:fixed;inset:0;z-index:9999;background:var(--cream);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px;text-align:center;animation:fadeIn .5s}
+.welcome-logo{width:160px;height:160px;margin-bottom:24px;
+  animation:welcomeBounce 1s ease-out;filter:drop-shadow(0 4px 12px rgba(107,142,90,.25))}
+@keyframes welcomeBounce{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+.welcome h1{font-size:28px;font-weight:800;color:var(--sage-dark);margin-bottom:6px;letter-spacing:1px}
+.welcome .welcome-sub{font-size:15px;color:var(--gray);margin-bottom:8px;font-weight:400}
+.welcome .welcome-cn{font-size:16px;color:var(--sage);margin-bottom:36px;font-weight:600}
+.welcome-btn{padding:14px 48px;background:var(--sage);color:#fff;border-radius:28px;
+  font-size:16px;font-weight:600;box-shadow:0 4px 16px rgba(107,142,90,.35);
+  transition:transform .15s;letter-spacing:.5px}
+.welcome-btn:active{transform:scale(.95)}
+.welcome-fade{animation:welcomeFadeOut .4s ease-in forwards}
+@keyframes welcomeFadeOut{to{opacity:0;pointer-events:none}}
 input:focus,textarea:focus{border-color:var(--sage) !important;box-shadow:0 0 0 2px var(--sage-light)}
 </style>
 </head>
@@ -345,6 +362,8 @@ function isOpen(){
 
 /* ─── App ─── */
 function App(){
+  const [welcome,setWelcome] = useState(true);
+  const [welcomeFading,setWelcomeFading] = useState(false);
   const [cat,setCat] = useState('custom');
   const [cart,setCart] = useState([]);
   const [showCart,setShowCart] = useState(false);
@@ -458,6 +477,21 @@ function App(){
     });
     setWizard(null);
   };
+
+  const enterMenu = () => {
+    setWelcomeFading(true);
+    setTimeout(()=>setWelcome(false), 400);
+  };
+
+  if(welcome) return (
+    <div className={`welcome${welcomeFading?' welcome-fade':''}`}>
+      <img src="logo.png" className="welcome-logo" alt="ZOZO Salad"/>
+      <h1>ZOZO Salad</h1>
+      <div className="welcome-sub">Fresh &amp; Healthy</div>
+      <div className="welcome-cn">左左沙拉製作所</div>
+      <button className="welcome-btn" onClick={enterMenu}>開始點餐</button>
+    </div>
+  );
 
   return (
     <>
