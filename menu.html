@@ -421,6 +421,8 @@ const MENU = {
 
 /* ─── Helpers ─── */
 const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+/* 訂單編號：4 位隨機數字 1000–9999 */
+const genOrderNo = () => String(1000 + Math.floor(Math.random()*9000));
 const fmtPrice = n => `$${n}`;
 const isValidPhone = p => /^09\d{8}$/.test(p.replace(/[\s-]/g,''));
 
@@ -439,7 +441,7 @@ function buildOrderText(o){
   }).join('\n');
   return [
     '🥗 ZOZO Salad 線上點餐',
-    `訂單編號：#${o.id.slice(-6).toUpperCase()}`,
+    `訂單編號：#${o.id}`,
     line,
     `取餐姓名：${o.name}`,
     `聯絡電話：${o.phone}`,
@@ -531,7 +533,7 @@ function App(){
     if(!custName.trim()){ alert('請輸入取餐姓名'); return; }
     if(!isValidPhone(custPhone)){ alert('請輸入正確手機號碼（09 開頭 10 碼）'); return; }
     setShowCart(false);
-    setPendingId(genId());
+    setPendingId(genOrderNo());
     setShowConfirm(true);
   };
 
@@ -824,7 +826,7 @@ function App(){
           <div className="success-icon">✓</div>
           <h2>訂單已帶入 LINE</h2>
           <p>請確認已在 LINE 對話中按下「傳送」<br/>店家收到訊息後會開始製作</p>
-          <div className="order-id">#{success.id.slice(-6).toUpperCase()}</div>
+          <div className="order-id">#{success.id}</div>
           <a className="submit-btn line-btn" href={lineOrderUrl(success)} target="_blank" rel="noopener"
             style={{maxWidth:400,marginBottom:20}}>
             <LineIcon/>沒開啟 LINE？再傳一次
