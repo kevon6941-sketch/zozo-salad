@@ -30,8 +30,24 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .header-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .header-logo{font-size:20px;font-weight:700;letter-spacing:.5px}
 .header-logo span{font-size:13px;font-weight:400;opacity:.85;margin-left:6px}
-.header-badge{margin-left:auto;font-size:12px;background:rgba(255,255,255,.2);
-  padding:3px 10px;border-radius:20px}
+.header-badge{margin-left:auto;font-size:12px;background:rgba(255,255,255,.2);color:#fff;
+  padding:4px 8px 4px 10px;border-radius:20px;display:flex;align-items:center;gap:4px;transition:transform .1s}
+.header-badge:active{transform:scale(.95)}
+.header-badge .dot{width:7px;height:7px;border-radius:50%;background:#B8F5A0;box-shadow:0 0 0 3px rgba(184,245,160,.3)}
+.header-badge.closed .dot{background:#fff;box-shadow:none;opacity:.8}
+/* Hours sheet */
+.hours-status{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
+  padding:5px 12px;border-radius:999px;margin:6px 0 14px}
+.hours-status.on{background:var(--sage-light);color:var(--sage-dark)}
+.hours-status.off{background:#FBE9E5;color:var(--red)}
+.hours-row{display:flex;align-items:center;padding:11px 12px;border-radius:var(--radius-sm);font-size:14px}
+.hours-row + .hours-row{border-top:1px solid var(--light-gray)}
+.hours-row.today{background:var(--sage-light);border-top-color:transparent;font-weight:700;color:var(--sage-dark)}
+.hours-row.today + .hours-row{border-top-color:transparent}
+.hours-day{width:64px;flex-shrink:0}
+.hours-day small{font-size:10px;margin-left:4px;background:var(--sage);color:#fff;padding:1px 5px;border-radius:6px;vertical-align:1px}
+.hours-time{flex:1;text-align:right;letter-spacing:.3px}
+.hours-time.off{color:var(--red)}
 
 /* Category tabs */
 .tabs{display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;
@@ -299,7 +315,8 @@ input:focus,textarea:focus{border-color:var(--sage) !important;box-shadow:0 0 0 
 .qty-btn.minus{color:var(--red);border:none}
 .qty-num{color:var(--sage-dark);font-weight:700}
 /* Combo prompt + jam picker */
-.combo-prompt{text-align:center}
+.combo-prompt{text-align:center;max-height:88vh;padding-bottom:0 !important}
+.combo-prompt .opt-modal-footer{position:sticky;bottom:0;background:#fff;margin:16px -16px 0;padding:12px 16px calc(16px + env(safe-area-inset-bottom,0));box-shadow:0 -6px 12px rgba(255,255,255,.9)}
 .combo-prompt-emoji{font-size:34px;margin-bottom:6px}
 .combo-prompt h3{font-size:19px;color:var(--sage-dark)}
 .combo-prompt-sub{font-size:13px;color:var(--gray);margin:4px 0 16px}
@@ -307,6 +324,7 @@ input:focus,textarea:focus{border-color:var(--sage) !important;box-shadow:0 0 0 
 .jam-picker-label{font-size:13px;font-weight:700;color:var(--warm);margin-bottom:8px}
 .jam-picker-label span{font-weight:500;color:var(--red)}
 .jam-picker .opt-chip{background:#fff}
+.chip-extra{font-size:11px;color:var(--warm);font-weight:600}
 .jam-picker .opt-chip.selected{border-color:var(--warm);background:#fff;color:var(--warm)}
 /* LINE send button */
 .line-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;text-decoration:none;
@@ -420,9 +438,19 @@ const MENU = {
     ],
   },
   combos: [
-    { id:'cA',label:'A',price:55,desc:'大杯紅茶＋果醬吐司',jamChoices:['奶酥','巧克力','花生'] },
-    { id:'cB',label:'B',price:70,desc:'大杯紅茶＋原味鬆餅' },
-    { id:'cC',label:'C',price:80,desc:'大杯紅茶＋莓果優格' },
+    { id:'cA',label:'A',price:55,desc:'大杯紅茶＋果醬吐司',snack:'果醬吐司',jamChoices:['奶酥','巧克力','花生'] },
+    { id:'cB',label:'B',price:70,desc:'大杯紅茶＋原味鬆餅',snack:'原味鬆餅' },
+    { id:'cC',label:'C',price:80,desc:'大杯紅茶＋莓果優格',snack:'莓果優格' },
+  ],
+  /* 套餐飲品可換（加減價） */
+  comboDrinks: [
+    { name:'紅茶',extra:0 },
+    { name:'無糖豆漿',extra:5 },
+    { name:'每日水果醋',extra:5 },
+    { name:'每日例湯',extra:35 },
+    { name:'鮮奶茶',extra:10 },
+    { name:'咖啡',extra:15 },
+    { name:'拿鐵',extra:30 },
   ],
   drinkNote: '可做成熱飲 / 小杯 (360ml) 少五元',
   waffleNote: '現點現做需等 10–15 分鐘',
@@ -474,6 +502,48 @@ function isOpen(){
   return (t>=660&&t<900)||(t>=1020&&t<1200); // 11:00-15:00, 17:00-20:00
 }
 
+/* 營業時間表（與 isOpen 一致） */
+const HOURS = [ [660,900],[1020,1200] ]; // 11:00-15:00, 17:00-20:00
+const CLOSED_DAYS = [6];                  // 週六公休
+const DAY_NAMES = ['週日','週一','週二','週三','週四','週五','週六'];
+const hm = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+function hoursStatus(){
+  const now=new Date(), day=now.getDay(), t=now.getHours()*60+now.getMinutes();
+  if(!CLOSED_DAYS.includes(day)){
+    for(const [a,b] of HOURS){ if(t>=a&&t<b) return {on:true,text:`營業中・${hm(b)} 休息`}; }
+    for(const [a] of HOURS){ if(t<a) return {on:false,text:`今天 ${hm(a)} 開始營業`}; }
+  }
+  for(let i=1;i<=7;i++){
+    const d=(day+i)%7;
+    if(!CLOSED_DAYS.includes(d)) return {on:false,text:`${i===1?'明天':DAY_NAMES[d]} ${hm(HOURS[0][0])} 開始營業`};
+  }
+  return {on:false,text:'休息中'};
+}
+function HoursSheet({ open, onClose }){
+  const today=new Date().getDay(), st=hoursStatus();
+  const order=[1,2,3,4,5,6,0];
+  return (
+    <div className="opt-modal" style={{zIndex:450}}>
+      <div className="opt-modal-bg" onClick={onClose}/>
+      <div className="opt-modal-content">
+        <h3>營業時間</h3>
+        <div className={`hours-status ${st.on?'on':'off'}`}>{st.on?'●':'○'} {st.text}</div>
+        {order.map(d=>(
+          <div key={d} className={`hours-row${d===today?' today':''}`}>
+            <div className="hours-day">{DAY_NAMES[d]}{d===today && <small>今天</small>}</div>
+            {CLOSED_DAYS.includes(d)
+              ? <div className="hours-time off">公休</div>
+              : <div className="hours-time">{HOURS.map(([a,b])=>`${hm(a)}–${hm(b)}`).join('　')}</div>}
+          </div>
+        ))}
+        <div className="opt-modal-footer">
+          <button className="wizard-next" onClick={onClose}>知道了</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── App ─── */
 function App(){
   const [welcome,setWelcome] = useState(true);
@@ -489,6 +559,7 @@ function App(){
   const [custName,setCustName] = useState('');
   const [custPhone,setCustPhone] = useState('');
   const [pendingId,setPendingId] = useState('');
+  const [showHours,setShowHours] = useState(false);
   const [open,setOpen] = useState(isOpen());
   const [soldOut,setSoldOut] = useState(loadSoldOut());
   const tabsRef = useRef(null);
@@ -587,7 +658,7 @@ function App(){
       price:salad.totalPrice,
       detail:[salad.protein.name, salad.ingredients.join('、'), salad.garnish, salad.dressing.join('、'),
         salad.addons?.length ? '加購：'+salad.addons.map(a=>a.name).join('、') : '',
-        salad.combo?`套餐${salad.combo.label}（${salad.comboJam ? salad.combo.desc.replace('果醬吐司',salad.comboJam+'吐司') : salad.combo.desc}）`:''].filter(Boolean).join('｜')
+        salad.combo?`套餐${salad.combo.label}（${salad.comboDrink.name}${salad.comboDrink.extra?'(+$'+salad.comboDrink.extra+')':''}＋${salad.comboJam ? salad.comboJam+'吐司' : salad.combo.snack}）`:''].filter(Boolean).join('｜')
     });
     setWizard(null);
   };
@@ -619,9 +690,11 @@ function App(){
             <img src="logo.png" width="62" height="62" style={{verticalAlign:'middle',marginRight:8}} alt="ZOZO"/>
             ZOZO Salad<span>線上點餐</span>
           </div>
-          <div className="header-badge" style={open?{}:{background:'rgba(212,85,58,.8)'}}>
-            {open?'營業中':'未營業'}
-          </div>
+          <button className={`header-badge${open?'':' closed'}`} style={open?{}:{background:'rgba(212,85,58,.8)'}}
+            onClick={()=>setShowHours(true)} aria-label="查看營業時間">
+            <span className="dot"/>{open?'營業中':'未營業'}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
         </div>
         <div className="tabs" ref={tabsRef}>
           {MENU.categories.map(c=>(
@@ -787,7 +860,9 @@ function App(){
       {optModal && <OptionModal item={optModal.item} dressings={MENU.custom.dressings} onAdd={addFromOpt} onClose={()=>setOptModal(null)}/>}
 
       {/* Custom salad wizard */}
-      {wizard && <SaladWizard data={MENU.custom} combos={MENU.combos} onAdd={addCustomSalad} onClose={()=>setWizard(null)}/>}
+      {wizard && <SaladWizard data={MENU.custom} combos={MENU.combos} drinks={MENU.comboDrinks} onAdd={addCustomSalad} onClose={()=>setWizard(null)}/>}
+
+      {showHours && <HoursSheet open={open} onClose={()=>setShowHours(false)}/>}
 
       {/* Confirm screen */}
       {showConfirm && (
@@ -998,7 +1073,7 @@ function OptionModal({ item, dressings, onAdd, onClose }){
 }
 
 /* ─── Custom Salad Wizard ─── */
-function SaladWizard({ data, combos, onAdd, onClose }){
+function SaladWizard({ data, combos, drinks, onAdd, onClose }){
   const [step, setStep] = useState(0);
   const [base, setBase] = useState(null);
   const [baseSub, setBaseSub] = useState('');
@@ -1008,8 +1083,10 @@ function SaladWizard({ data, combos, onAdd, onClose }){
   const [dressing, setDressing] = useState([]);
   const [combo, setCombo] = useState(null);
   const [comboJam, setComboJam] = useState('');
+  const [comboDrink, setComboDrink] = useState(drinks[0]);
   const [comboPrompt, setComboPrompt] = useState(false);
   const pickCombo = c => { setCombo(combo?.id===c.id?null:c); setComboJam(''); };
+  const clearCombo = () => { setCombo(null); setComboJam(''); setComboDrink(drinks[0]); };
   const comboReady = !combo || !combo.jamChoices || !!comboJam;
   const [addons, setAddons] = useState([]);
   const STEPS = ['基底','蛋白質','配菜','點綴','醬料＋加購'];
@@ -1036,7 +1113,7 @@ function SaladWizard({ data, combos, onAdd, onClose }){
   const extraIngCount = Math.max(0, ingredients.length - 4);
   const extraDressingCount = Math.max(0, dressing.length - 1);
   const addonsTotal = addons.reduce((s,a)=>s+a.price,0);
-  const totalPrice = (base?.price||0) + (protein?.extra||0) + (combo?.price||0) + (extraIngCount * 20) + (extraDressingCount * 20) + addonsTotal;
+  const totalPrice = (base?.price||0) + (protein?.extra||0) + (combo ? combo.price + comboDrink.extra : 0) + (extraIngCount * 20) + (extraDressingCount * 20) + addonsTotal;
 
   const canNext = () => {
     if(step===0) return !!base && (!base.subChoices || !!baseSub);
@@ -1047,7 +1124,7 @@ function SaladWizard({ data, combos, onAdd, onClose }){
     return false;
   };
 
-  const doAdd = () => onAdd({ base, baseSub, protein, ingredients, garnish, dressing, combo, comboJam, addons, totalPrice });
+  const doAdd = () => onAdd({ base, baseSub, protein, ingredients, garnish, dressing, combo, comboJam, comboDrink, addons, totalPrice });
   /* 沒選套餐 → 先跳出推薦；已選套餐 → 直接加入 */
   const handleSubmit = () => { if(!combo) setComboPrompt(true); else doAdd(); };
 
@@ -1221,7 +1298,7 @@ function SaladWizard({ data, combos, onAdd, onClose }){
                     </button>
                   ))}
                 </div>
-                {combo?.jamChoices && <JamPicker opts={combo.jamChoices} value={comboJam} onChange={setComboJam}/>}
+                {combo && <ComboOptions combo={combo} drinks={drinks} drink={comboDrink} onDrink={setComboDrink} jam={comboJam} onJam={setComboJam}/>}
               </>
             )}
           </>
@@ -1243,7 +1320,7 @@ function SaladWizard({ data, combos, onAdd, onClose }){
 
       {comboPrompt && (
         <div className="opt-modal" style={{zIndex:450}}>
-          <div className="opt-modal-bg" onClick={()=>{setComboPrompt(false);setCombo(null);setComboJam('');}}/>
+          <div className="opt-modal-bg" onClick={()=>{setComboPrompt(false);clearCombo();}}/>
           <div className="opt-modal-content combo-prompt">
             <div className="combo-prompt-emoji">🥤🍞</div>
             <h3>要不要加點套餐？</h3>
@@ -1257,9 +1334,9 @@ function SaladWizard({ data, combos, onAdd, onClose }){
                 </button>
               ))}
             </div>
-            {combo?.jamChoices && <JamPicker opts={combo.jamChoices} value={comboJam} onChange={setComboJam}/>}
+            {combo && <ComboOptions combo={combo} drinks={drinks} drink={comboDrink} onDrink={setComboDrink} jam={comboJam} onJam={setComboJam}/>}
             <div className="opt-modal-footer">
-              <button className="wizard-back" onClick={()=>{setCombo(null);setComboJam('');doAdd();}}>不用了</button>
+              <button className="wizard-back" onClick={()=>{clearCombo();onAdd({ base, baseSub, protein, ingredients, garnish, dressing, combo:null, comboJam:'', comboDrink:drinks[0], addons, totalPrice: totalPrice - (combo ? combo.price + comboDrink.extra : 0) });}}>不用了</button>
               <button className="wizard-next" disabled={!combo || !comboReady} onClick={doAdd}>
                 {combo ? `加入套餐　${fmtPrice(totalPrice)}` : '請選擇套餐'}
               </button>
@@ -1271,18 +1348,30 @@ function SaladWizard({ data, combos, onAdd, onClose }){
   );
 }
 
-/* 套餐 A 果醬口味選擇 */
-function JamPicker({ opts, value, onChange }){
+/* 套餐選項：飲品（可換）＋ 套餐 A 果醬口味 */
+function ComboOptions({ combo, drinks, drink, onDrink, jam, onJam }){
   return (
     <div className="jam-picker">
-      <div className="jam-picker-label">果醬吐司口味{!value && <span>（必選）</span>}</div>
+      <div className="jam-picker-label">飲品（大杯）</div>
       <div className="opt-row">
-        {opts.map(j=>(
-          <button key={j} className={`opt-chip${value===j?' selected':''}`} onClick={()=>onChange(j)}>
-            {value===j && '✓ '}{j}
+        {drinks.map(d=>(
+          <button key={d.name} className={`opt-chip${drink.name===d.name?' selected':''}`} onClick={()=>onDrink(d)}>
+            {drink.name===d.name && '✓ '}{d.name}{d.extra>0 && <span className="chip-extra"> +${d.extra}</span>}
           </button>
         ))}
       </div>
+      {combo.jamChoices && (
+        <>
+          <div className="jam-picker-label" style={{marginTop:14}}>果醬吐司口味{!jam && <span>（必選）</span>}</div>
+          <div className="opt-row">
+            {combo.jamChoices.map(j=>(
+              <button key={j} className={`opt-chip${jam===j?' selected':''}`} onClick={()=>onJam(j)}>
+                {jam===j && '✓ '}{j}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
