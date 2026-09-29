@@ -475,12 +475,6 @@ function buildOrderText(o){
   const items=o.items.map((it,i)=>{
     let s=`${i+1}. ${it.name} ×${it.qty}　${fmtPrice(it.price*it.qty)}`;
     if(it.detail) s+=`\n   ${it.detail}`;
-    if(it.extras && it.extras.length){
-      const sum=it.extras.reduce((a,e)=>a+e.amount,0);
-      s+=`\n   💰 加價 +${fmtPrice(sum)}${it.qty>1?'（每份）':''}`;
-      s+=`\n   　基本價 ${fmtPrice(it.basePrice)}`;
-      it.extras.forEach(e=>{ s+=`\n   　${e.label} +${fmtPrice(e.amount)}`; });
-    }
     return s;
   }).join('\n');
   return [
@@ -675,7 +669,7 @@ function App(){
       price:salad.totalPrice, basePrice:salad.base.price, extras,
       detail:[salad.protein.name, salad.ingredients.join('、'), salad.garnish, salad.dressing.join('、'),
         salad.addons?.length ? '加購：'+salad.addons.map(a=>a.name).join('、') : '',
-        salad.combo?`套餐${salad.combo.label}（${salad.comboDrink.name}${salad.comboDrink.extra?'(+$'+salad.comboDrink.extra+')':''}＋${salad.comboJam ? salad.comboJam+'吐司' : salad.combo.snack}）`:''].filter(Boolean).join('｜')
+        salad.combo?`套餐${salad.combo.label}（${salad.comboDrink.name}＋${salad.comboJam ? salad.comboJam+'吐司' : salad.combo.snack}）`:''].filter(Boolean).join('｜')
     });
     setWizard(null);
   };
