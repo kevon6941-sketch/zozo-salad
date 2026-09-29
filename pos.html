@@ -339,9 +339,19 @@ const MENU = {
     ],
   },
   combos:[
-    {id:'cA',label:'A',price:55,desc:'紅茶+果醬吐司'},
-    {id:'cB',label:'B',price:70,desc:'紅茶+原味鬆餅'},
-    {id:'cC',label:'C',price:80,desc:'紅茶+莓果優格'},
+    {id:'cA',label:'A',price:55,desc:'紅茶+果醬吐司',snack:'果醬吐司',jamChoices:['奶酥','巧克力','花生']},
+    {id:'cB',label:'B',price:70,desc:'紅茶+原味鬆餅',snack:'原味鬆餅'},
+    {id:'cC',label:'C',price:80,desc:'紅茶+莓果優格',snack:'莓果優格'},
+  ],
+  /* 套餐飲品可換（加減價），與 menu.html 相同 */
+  comboDrinks:[
+    {name:'紅茶',extra:0},
+    {name:'無糖豆漿',extra:5},
+    {name:'蘋果醋',extra:5},
+    {name:'每日例湯',extra:35},
+    {name:'鮮奶茶',extra:10},
+    {name:'咖啡',extra:15},
+    {name:'拿鐵',extra:30},
   ],
 };
 
@@ -430,7 +440,7 @@ function App(){
     addToCart({id:key,key,name:'自選｜'+(salad.baseSub||salad.base.name),price:salad.total,
       detail:[salad.protein.name,salad.ings.join('、'),salad.garnish,salad.dress.join('、'),
         salad.addons?.length?'加購:'+salad.addons.map(a=>a.name).join('、'):'',
-        salad.combo?'套餐'+salad.combo.label:''].filter(Boolean).join('｜')});
+        salad.combo?`套餐${salad.combo.label}（${salad.comboDrink.name}＋${salad.comboJam?salad.comboJam+'吐司':salad.combo.snack}）`:''].filter(Boolean).join('｜')});
     setWizard(false);
   };
 
@@ -601,7 +611,7 @@ function App(){
       {optModal && <QuickOptModal item={optModal} menu={MENU} onAdd={addFromOpt} onClose={()=>setOptModal(null)}/>}
 
       {/* Custom salad wizard */}
-      {wizard && <SaladWizard data={MENU.custom} combos={MENU.combos} soldOut={soldOut}
+      {wizard && <SaladWizard data={MENU.custom} combos={MENU.combos} drinks={MENU.comboDrinks} soldOut={soldOut}
         init={typeof wizard==='object'?wizard:null} onAdd={addCustom} onClose={()=>setWizard(false)}/>}
 
       {/* Orders panel */}
@@ -826,7 +836,7 @@ function QuickOptModal({item,menu,onAdd,onClose}){
 }
 
 /* ─── Custom Salad Wizard ─── */
-function SaladWizard({data,combos,soldOut=[],onAdd,onClose,init}){
+function SaladWizard({data,combos,drinks,soldOut=[],onAdd,onClose,init}){
   const [step,setStep]=useState(init?.step||0);
   const [base,setBase]=useState(init?.base||null);
   const [baseSub,setBaseSub]=useState(init?.baseSub||'');
@@ -835,6 +845,10 @@ function SaladWizard({data,combos,soldOut=[],onAdd,onClose,init}){
   const [garnish,setGarnish]=useState('');
   const [dress,setDress]=useState([]);
   const [combo,setCombo]=useState(null);
+  const [comboDrink,setComboDrink]=useState(drinks[0]);
+  const [comboJam,setComboJam]=useState('');
+  const pickCombo=c=>{setCombo(combo?.id===c.id?null:c);setComboJam('');setComboDrink(drinks[0]);};
+  const comboReady=!combo||!combo.jamChoices||!!comboJam;
   const [addons,setAddons]=useState([]);
   const STEPS=['基底','蛋白質','配菜','點綴','醬料+加購'];
 
@@ -845,14 +859,14 @@ function SaladWizard({data,combos,soldOut=[],onAdd,onClose,init}){
   const extraIng=Math.max(0,ings.length-4);
   const extraDress=Math.max(0,dress.length-1);
   const addonTotal=addons.reduce((s,a)=>s+(a.p||a.price||0),0);
-  const total=(base?.price||0)+(protein?.extra||0)+(combo?.price||0)+extraIng*20+extraDress*20+addonTotal;
+  const total=(base?.price||0)+(protein?.extra||0)+(combo?combo.price+comboDrink.extra:0)+extraIng*20+extraDress*20+addonTotal;
 
   const canNext=()=>{
     if(step===0)return!!base&&(!base.subs||!!baseSub);
     if(step===1)return!!protein;
     if(step===2)return ings.length>=4;
     if(step===3)return!!garnish;
-    if(step===4)return dress.length>=1;
+    if(step===4)return dress.length>=1&&comboReady;
     return false;
   };
 
@@ -984,12 +998,38 @@ function SaladWizard({data,combos,soldOut=[],onAdd,onClose,init}){
                   <div className="opt-grid col3">
                     {combos.map(c=>(
                       <button key={c.id} className={`opt-card${combo?.id===c.id?' sel':''}`}
-                        onClick={()=>setCombo(combo?.id===c.id?null:c)}>
+                        onClick={()=>pickCombo(c)}>
                         套餐{c.label}<div className="extra">+${c.price}</div>
                         <div className="sub">{c.desc}</div>
+                        {combo?.id===c.id&&<span className="check">✓</span>}
                       </button>
                     ))}
                   </div>
+                  {combo&&(
+                    <>
+                      <h3 style={{marginTop:14}}>套餐飲品</h3>
+                      <div className="opt-grid col4">
+                        {drinks.map(d=>(
+                          <button key={d.name} className={`opt-card${comboDrink.name===d.name?' sel':''}`} onClick={()=>setComboDrink(d)}>
+                            {d.name}<div className="extra">{d.extra>0?`+$${d.extra}`:'+$0'}</div>
+                            {comboDrink.name===d.name&&<span className="check">✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {combo?.jamChoices&&(
+                    <>
+                      <h3 style={{marginTop:14}}>果醬吐司口味{!comboJam&&<span style={{color:'var(--red)',fontSize:13,fontWeight:500}}>（必選）</span>}</h3>
+                      <div className="opt-grid col3">
+                        {combo.jamChoices.map(j=>(
+                          <button key={j} className={`opt-card${comboJam===j?' sel':''}`} onClick={()=>setComboJam(j)}>
+                            {j}{comboJam===j&&<span className="check">✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </>
@@ -1000,7 +1040,7 @@ function SaladWizard({data,combos,soldOut=[],onAdd,onClose,init}){
           {step<4?(
             <button className="wiz-next" disabled={!canNext()} onClick={()=>setStep(step+1)}>下一步</button>
           ):(
-            <button className="wiz-next" disabled={!canNext()} onClick={()=>onAdd({base,baseSub,protein,ings,garnish,dress,combo,addons,total})}>
+            <button className="wiz-next" disabled={!canNext()} onClick={()=>onAdd({base,baseSub,protein,ings,garnish,dress,combo,comboDrink,comboJam,addons,total})}>
               加入訂單　{fmt(total)}
             </button>
           )}
