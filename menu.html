@@ -475,6 +475,12 @@ function buildOrderText(o){
   const items=o.items.map((it,i)=>{
     let s=`${i+1}. ${it.name} ×${it.qty}　${fmtPrice(it.price*it.qty)}`;
     if(it.detail) s+=`\n   ${it.detail}`;
+    if(it.extras && it.extras.length){
+      const sum=it.extras.reduce((a,e)=>a+e.amount,0);
+      s+=`\n   💰 加價 +${fmtPrice(sum)}${it.qty>1?'（每份）':''}`;
+      s+=`\n   　基本價 ${fmtPrice(it.basePrice)}`;
+      it.extras.forEach(e=>{ s+=`\n   　${e.label} +${fmtPrice(e.amount)}`; });
+    }
     return s;
   }).join('\n');
   return [
@@ -653,9 +659,20 @@ function App(){
   /* Add custom salad from wizard */
   const addCustomSalad = (salad) => {
     const key = 'custom_'+genId();
+    /* 加價明細（基本價以外的額外金額） */
+    const extras = [];
+    const exIng = Math.max(0, salad.ingredients.length-4), exDr = Math.max(0, salad.dressing.length-1);
+    if(salad.protein?.extra) extras.push({label:`蛋白質換${salad.protein.name}`, amount:salad.protein.extra});
+    if(exIng) extras.push({label:`配菜多選 ${exIng} 種（${salad.ingredients.slice(4).join('、')}）`, amount:exIng*20});
+    if(exDr) extras.push({label:`醬料多選 ${exDr} 種（${salad.dressing.slice(1).join('、')}）`, amount:exDr*20});
+    (salad.addons||[]).forEach(a=>extras.push({label:`加購${a.name.replace(/^加購/,'')}`, amount:a.price}));
+    if(salad.combo){
+      extras.push({label:`套餐${salad.combo.label}`, amount:salad.combo.price});
+      if(salad.comboDrink?.extra) extras.push({label:`套餐飲品換${salad.comboDrink.name}`, amount:salad.comboDrink.extra});
+    }
     addToCart({
       id:key, key, name:'自選｜'+(salad.baseSub||salad.base.name),
-      price:salad.totalPrice,
+      price:salad.totalPrice, basePrice:salad.base.price, extras,
       detail:[salad.protein.name, salad.ingredients.join('、'), salad.garnish, salad.dressing.join('、'),
         salad.addons?.length ? '加購：'+salad.addons.map(a=>a.name).join('、') : '',
         salad.combo?`套餐${salad.combo.label}（${salad.comboDrink.name}${salad.comboDrink.extra?'(+$'+salad.comboDrink.extra+')':''}＋${salad.comboJam ? salad.comboJam+'吐司' : salad.combo.snack}）`:''].filter(Boolean).join('｜')
