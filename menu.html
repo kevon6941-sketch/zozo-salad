@@ -298,6 +298,16 @@ input:focus,textarea:focus{border-color:var(--sage) !important;box-shadow:0 0 0 
 .qty-btn:active{transform:translateY(2px);box-shadow:none}
 .qty-btn.minus{color:var(--red);border:none}
 .qty-num{color:var(--sage-dark);font-weight:700}
+/* Combo prompt + jam picker */
+.combo-prompt{text-align:center}
+.combo-prompt-emoji{font-size:34px;margin-bottom:6px}
+.combo-prompt h3{font-size:19px;color:var(--sage-dark)}
+.combo-prompt-sub{font-size:13px;color:var(--gray);margin:4px 0 16px}
+.jam-picker{margin-top:12px;padding:12px;background:var(--warm-light);border-radius:var(--radius);text-align:left}
+.jam-picker-label{font-size:13px;font-weight:700;color:var(--warm);margin-bottom:8px}
+.jam-picker-label span{font-weight:500;color:var(--red)}
+.jam-picker .opt-chip{background:#fff}
+.jam-picker .opt-chip.selected{border-color:var(--warm);background:#fff;color:var(--warm)}
 /* LINE send button */
 .line-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;text-decoration:none;
   background:linear-gradient(135deg,#2BD86F 0%,#06C755 50%,#04A847 100%) !important;
@@ -410,7 +420,7 @@ const MENU = {
     ],
   },
   combos: [
-    { id:'cA',label:'A',price:55,desc:'大杯紅茶＋果醬吐司' },
+    { id:'cA',label:'A',price:55,desc:'大杯紅茶＋果醬吐司',jamChoices:['奶酥','巧克力','花生'] },
     { id:'cB',label:'B',price:70,desc:'大杯紅茶＋原味鬆餅' },
     { id:'cC',label:'C',price:80,desc:'大杯紅茶＋莓果優格' },
   ],
@@ -577,7 +587,7 @@ function App(){
       price:salad.totalPrice,
       detail:[salad.protein.name, salad.ingredients.join('、'), salad.garnish, salad.dressing.join('、'),
         salad.addons?.length ? '加購：'+salad.addons.map(a=>a.name).join('、') : '',
-        salad.combo?'套餐'+salad.combo.label:''].filter(Boolean).join('｜')
+        salad.combo?`套餐${salad.combo.label}（${salad.comboJam ? salad.combo.desc.replace('果醬吐司',salad.comboJam+'吐司') : salad.combo.desc}）`:''].filter(Boolean).join('｜')
     });
     setWizard(null);
   };
@@ -997,6 +1007,10 @@ function SaladWizard({ data, combos, onAdd, onClose }){
   const [garnish, setGarnish] = useState('');
   const [dressing, setDressing] = useState([]);
   const [combo, setCombo] = useState(null);
+  const [comboJam, setComboJam] = useState('');
+  const [comboPrompt, setComboPrompt] = useState(false);
+  const pickCombo = c => { setCombo(combo?.id===c.id?null:c); setComboJam(''); };
+  const comboReady = !combo || !combo.jamChoices || !!comboJam;
   const [addons, setAddons] = useState([]);
   const STEPS = ['基底','蛋白質','配菜','點綴','醬料＋加購'];
 
@@ -1029,13 +1043,13 @@ function SaladWizard({ data, combos, onAdd, onClose }){
     if(step===1) return !!protein;
     if(step===2) return ingredients.length>=4;
     if(step===3) return !!garnish;
-    if(step===4) return dressing.length>=1;
+    if(step===4) return dressing.length>=1 && comboReady;
     return false;
   };
 
-  const handleSubmit = () => {
-    onAdd({ base, baseSub, protein, ingredients, garnish, dressing, combo, addons, totalPrice });
-  };
+  const doAdd = () => onAdd({ base, baseSub, protein, ingredients, garnish, dressing, combo, comboJam, addons, totalPrice });
+  /* 沒選套餐 → 先跳出推薦；已選套餐 → 直接加入 */
+  const handleSubmit = () => { if(!combo) setComboPrompt(true); else doAdd(); };
 
   return (
     <div className="wizard-overlay">
@@ -1200,13 +1214,14 @@ function SaladWizard({ data, combos, onAdd, onClose }){
                 <div className="combo-grid">
                   {combos.map(c=>(
                     <button key={c.id} className={`combo-card${combo?.id===c.id?' selected':''}`}
-                      onClick={()=>setCombo(combo?.id===c.id?null:c)}>
+                      onClick={()=>pickCombo(c)}>
                       <div className="combo-card-label">套餐 {c.label}</div>
                       <div className="combo-card-price">+{fmtPrice(c.price)}</div>
                       <div className="combo-card-desc">{c.desc}</div>
                     </button>
                   ))}
                 </div>
+                {combo?.jamChoices && <JamPicker opts={combo.jamChoices} value={comboJam} onChange={setComboJam}/>}
               </>
             )}
           </>
@@ -1224,6 +1239,49 @@ function SaladWizard({ data, combos, onAdd, onClose }){
             加入訂單　{fmtPrice(totalPrice)}
           </button>
         )}
+      </div>
+
+      {comboPrompt && (
+        <div className="opt-modal" style={{zIndex:450}}>
+          <div className="opt-modal-bg" onClick={()=>{setComboPrompt(false);setCombo(null);setComboJam('');}}/>
+          <div className="opt-modal-content combo-prompt">
+            <div className="combo-prompt-emoji">🥤🍞</div>
+            <h3>要不要加點套餐？</h3>
+            <p className="combo-prompt-sub">沙拉配上飲料和點心，吃得更滿足</p>
+            <div className="combo-grid">
+              {combos.map(c=>(
+                <button key={c.id} className={`combo-card${combo?.id===c.id?' selected':''}`} onClick={()=>pickCombo(c)}>
+                  <div className="combo-card-label">套餐 {c.label}</div>
+                  <div className="combo-card-price">+{fmtPrice(c.price)}</div>
+                  <div className="combo-card-desc">{c.desc}</div>
+                </button>
+              ))}
+            </div>
+            {combo?.jamChoices && <JamPicker opts={combo.jamChoices} value={comboJam} onChange={setComboJam}/>}
+            <div className="opt-modal-footer">
+              <button className="wizard-back" onClick={()=>{setCombo(null);setComboJam('');doAdd();}}>不用了</button>
+              <button className="wizard-next" disabled={!combo || !comboReady} onClick={doAdd}>
+                {combo ? `加入套餐　${fmtPrice(totalPrice)}` : '請選擇套餐'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* 套餐 A 果醬口味選擇 */
+function JamPicker({ opts, value, onChange }){
+  return (
+    <div className="jam-picker">
+      <div className="jam-picker-label">果醬吐司口味{!value && <span>（必選）</span>}</div>
+      <div className="opt-row">
+        {opts.map(j=>(
+          <button key={j} className={`opt-chip${value===j?' selected':''}`} onClick={()=>onChange(j)}>
+            {value===j && '✓ '}{j}
+          </button>
+        ))}
       </div>
     </div>
   );
